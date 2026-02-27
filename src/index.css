@@ -1,68 +1,418 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+/* ── Design Tokens ─────────────────────────── */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  color-scheme: light;
+  color: #1e3a5f;
+  background-color: #e8f4fd;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    linear-gradient(135deg, #43C6DB 0%, #2196F3 25%, #1976D2 50%, #42A5F5 75%, #4FC3F7 100%);
+  background-attachment: fixed;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+::selection {
+  background: rgba(255, 255, 255, 0.35);
+  color: #0d47a1;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
+/* ── Scrollbar ─────────────────────────────── */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.5); }
+
+/* ── Animations ────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-18px); }
 }
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+@keyframes float-reverse {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(14px); }
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+.animate-float         { animation: float 7s ease-in-out infinite; }
+.animate-float-reverse { animation: float-reverse 9s ease-in-out infinite; }
+
+/* ========== CLAYMORPHISM — DRAMATIC 3D ========== */
+@layer components {
+
+  /* THE CLAY FORMULA — aggressive shadows for real 3D depth */
+  .clay {
+    border-radius: 32px;
+    background: #ffffff;
+    border: none;
+    box-shadow:
+      0 8px 0px rgba(60, 90, 200, 0.35),
+      0 24px 80px rgba(60, 100, 220, 0.4),
+      inset 0 -12px 28px rgba(70, 110, 230, 0.32),
+      inset 0 12px 28px rgba(255, 255, 255, 1);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.3s ease;
   }
-  a:hover {
-    color: #747bff;
+  .clay:hover {
+    transform: translateY(-12px) scale(1.03);
+    box-shadow:
+      0 20px 0px rgba(60, 90, 200, 0.2),
+      0 40px 100px rgba(60, 100, 220, 0.45),
+      inset 0 -12px 28px rgba(70, 110, 230, 0.32),
+      inset 0 12px 28px rgba(255, 255, 255, 1);
   }
-  button {
-    background-color: #f9f9f9;
+
+  /* Static clay — no hover lift or glow (used for feature cards) */
+  .clay-feature {
+    border-radius: 32px;
+    background: #ffffff;
+    border: none;
+    box-shadow:
+      0 8px 0px rgba(60, 90, 200, 0.35),
+      0 24px 80px rgba(60, 100, 220, 0.4),
+      inset 0 -12px 28px rgba(70, 110, 230, 0.32),
+      inset 0 12px 28px rgba(255, 255, 255, 1);
   }
-}
+
+  /* ── Clay Color Variants — saturated & dramatic ── */
+  .clay-blue {
+    background: #BFDBFE;
+    box-shadow:
+      0 8px 0px rgba(29, 78, 216, 0.5),
+      0 24px 80px rgba(29, 100, 230, 0.45),
+      inset 0 -12px 28px rgba(37, 99, 235, 0.38),
+      inset 0 12px 28px rgba(255, 255, 255, 0.95);
+  }
+  .clay-blue:hover {
+    transform: translateY(-12px) scale(1.03);
+    box-shadow:
+      0 20px 0px rgba(29, 78, 216, 0.3),
+      0 40px 100px rgba(29, 100, 230, 0.5),
+      inset 0 -12px 28px rgba(37, 99, 235, 0.38),
+      inset 0 12px 28px rgba(255, 255, 255, 0.95);
+  }
+
+  .clay-purple {
+    background: #D8B4FE;
+    box-shadow:
+      0 8px 0px rgba(109, 40, 217, 0.5),
+      0 24px 80px rgba(124, 58, 237, 0.45),
+      inset 0 -12px 28px rgba(124, 58, 237, 0.38),
+      inset 0 12px 28px rgba(255, 255, 255, 0.95);
+  }
+  .clay-purple:hover {
+    transform: translateY(-12px) scale(1.03);
+    box-shadow:
+      0 20px 0px rgba(109, 40, 217, 0.3),
+      0 40px 100px rgba(124, 58, 237, 0.5),
+      inset 0 -12px 28px rgba(124, 58, 237, 0.38),
+      inset 0 12px 28px rgba(255, 255, 255, 0.95);
+  }
+
+  .clay-green {
+    background: #86EFAC;
+    box-shadow:
+      0 8px 0px rgba(21, 128, 61, 0.5),
+      0 24px 80px rgba(22, 163, 74, 0.45),
+      inset 0 -12px 28px rgba(22, 163, 74, 0.38),
+      inset 0 12px 28px rgba(255, 255, 255, 0.95);
+  }
+  .clay-green:hover {
+    transform: translateY(-12px) scale(1.03);
+    box-shadow:
+      0 20px 0px rgba(21, 128, 61, 0.3),
+      0 40px 100px rgba(22, 163, 74, 0.5),
+      inset 0 -12px 28px rgba(22, 163, 74, 0.38),
+      inset 0 12px 28px rgba(255, 255, 255, 0.95);
+  }
+
+  .clay-peach {
+    background: #FCA5A5;
+    box-shadow:
+      0 8px 0px rgba(185, 28, 28, 0.4),
+      0 24px 80px rgba(220, 80, 60, 0.45),
+      inset 0 -12px 28px rgba(220, 80, 60, 0.35),
+      inset 0 12px 28px rgba(255, 255, 255, 0.95);
+  }
+  .clay-peach:hover {
+    transform: translateY(-12px) scale(1.03);
+    box-shadow:
+      0 20px 0px rgba(185, 28, 28, 0.25),
+      0 40px 100px rgba(220, 80, 60, 0.5),
+      inset 0 -12px 28px rgba(220, 80, 60, 0.35),
+      inset 0 12px 28px rgba(255, 255, 255, 0.95);
+  }
+
+  .clay-pink {
+    background: #F9A8D4;
+    box-shadow:
+      0 8px 0px rgba(190, 24, 93, 0.45),
+      0 24px 80px rgba(219, 39, 119, 0.45),
+      inset 0 -12px 28px rgba(219, 39, 119, 0.35),
+      inset 0 12px 28px rgba(255, 255, 255, 0.95);
+  }
+  .clay-pink:hover {
+    transform: translateY(-12px) scale(1.03);
+    box-shadow:
+      0 20px 0px rgba(190, 24, 93, 0.28),
+      0 40px 100px rgba(219, 39, 119, 0.5),
+      inset 0 -12px 28px rgba(219, 39, 119, 0.35),
+      inset 0 12px 28px rgba(255, 255, 255, 0.95);
+  }
+
+  .clay-yellow {
+    background: #FDE047;
+    box-shadow:
+      0 8px 0px rgba(161, 98, 7, 0.45),
+      0 24px 80px rgba(202, 138, 4, 0.45),
+      inset 0 -12px 28px rgba(202, 138, 4, 0.35),
+      inset 0 12px 28px rgba(255, 255, 255, 0.95);
+  }
+  .clay-yellow:hover {
+    transform: translateY(-12px) scale(1.03);
+    box-shadow:
+      0 20px 0px rgba(161, 98, 7, 0.28),
+      0 40px 100px rgba(202, 138, 4, 0.5),
+      inset 0 -12px 28px rgba(202, 138, 4, 0.35),
+      inset 0 12px 28px rgba(255, 255, 255, 0.95);
+  }
+
+  /* ── Navbar ─────────────────────────────── */
+  .clay-nav {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 0 0 32px 32px;
+    border: none;
+    box-shadow:
+      0 6px 0px rgba(60, 90, 200, 0.2),
+      0 16px 50px rgba(60, 100, 220, 0.25),
+      inset 0 -8px 20px rgba(100, 140, 230, 0.2),
+      inset 0 8px 20px rgba(255, 255, 255, 1);
+  }
+
+  /* ── Container — Three Simple Steps ────── */
+  .clay-container {
+    background: #EFF6FF;
+    border-radius: 40px;
+    border: none;
+    box-shadow:
+      0 12px 0px rgba(29, 78, 216, 0.3),
+      0 32px 90px rgba(60, 100, 220, 0.35),
+      inset 0 -14px 32px rgba(37, 99, 235, 0.25),
+      inset 0 14px 32px rgba(255, 255, 255, 1);
+  }
+
+  /* ── Footer ─────────────────────────────── */
+  .clay-footer {
+    background: rgba(239, 246, 255, 0.7);
+    border-radius: 28px 28px 0 0;
+    border: none;
+    box-shadow:
+      0 -6px 0px rgba(29, 78, 216, 0.15),
+      0 -20px 50px rgba(60, 100, 220, 0.15),
+      inset 0 8px 20px rgba(255, 255, 255, 0.8);
+  }
+
+  /* ── Primary CTA Button ─────────────────── */
+  .clay-btn-primary {
+    background: linear-gradient(160deg, #6366F1 0%, #4F46E5 100%);
+    border-radius: 20px;
+    border: none;
+    color: white;
+    font-weight: 700;
+    box-shadow:
+      0 6px 0px rgba(55, 48, 163, 0.6),
+      0 16px 40px rgba(79, 70, 229, 0.5),
+      inset 0 -6px 14px rgba(55, 48, 163, 0.4),
+      inset 0 6px 14px rgba(200, 210, 255, 0.35);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.2s ease;
+  }
+  .clay-btn-primary:hover {
+    transform: translateY(-5px) scale(1.03);
+    box-shadow:
+      0 10px 0px rgba(55, 48, 163, 0.4),
+      0 26px 55px rgba(79, 70, 229, 0.55),
+      inset 0 -6px 14px rgba(55, 48, 163, 0.4),
+      inset 0 6px 14px rgba(200, 210, 255, 0.35);
+  }
+  .clay-btn-primary:active {
+    transform: translateY(2px) scale(0.99);
+    box-shadow:
+      0 2px 0px rgba(55, 48, 163, 0.6),
+      0 8px 20px rgba(79, 70, 229, 0.4),
+      inset 0 -6px 14px rgba(55, 48, 163, 0.4),
+      inset 0 6px 14px rgba(200, 210, 255, 0.35);
+  }
+
+  /* ── Secondary Button ───────────────────── */
+  .clay-btn-secondary {
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 20px;
+    border: none;
+    color: #3730A3;
+    font-weight: 700;
+    box-shadow:
+      0 6px 0px rgba(55, 48, 163, 0.25),
+      0 16px 40px rgba(60, 100, 220, 0.25),
+      inset 0 -6px 14px rgba(100, 130, 220, 0.2),
+      inset 0 6px 14px rgba(255, 255, 255, 1);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .clay-btn-secondary:hover {
+    transform: translateY(-5px) scale(1.02);
+  }
+
+  /* ── Stat Pills ─────────────────────────── */
+  .clay-pill {
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 999px;
+    border: none;
+    box-shadow:
+      0 5px 0px rgba(60, 90, 200, 0.25),
+      0 14px 35px rgba(60, 100, 220, 0.3),
+      inset 0 -5px 12px rgba(100, 130, 220, 0.2),
+      inset 0 5px 12px rgba(255, 255, 255, 1);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .clay-pill:hover {
+    transform: translateY(-4px) scale(1.03);
+  }
+
+  /* ── Icon Container (white clay chip on coloured card) ── */
+  .clay-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow:
+      0 6px 0px rgba(0, 0, 0, 0.22),
+      0 14px 32px rgba(0, 0, 0, 0.18),
+      inset 0 -6px 14px rgba(0, 0, 0, 0.18),
+      inset 0 6px 14px rgba(255, 255, 255, 1);
+  }
+
+  /* ── Carousel ───────────────────────────── */
+  .clay-carousel-track {
+    display: flex;
+    gap: 24px;
+    transition: transform 0.5s cubic-bezier(0.34, 1.2, 0.64, 1);
+    align-items: center;
+  }
+
+  .clay-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.45);
+    border: none;
+    padding: 0;
+    box-shadow:
+      inset 0 3px 6px rgba(0, 0, 0, 0.2),
+      inset 0 -3px 6px rgba(255, 255, 255, 0.3);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: pointer;
+  }
+  .clay-dot.active {
+    width: 32px;
+    background: white;
+    box-shadow:
+      0 4px 0px rgba(60, 90, 200, 0.3),
+      0 10px 24px rgba(60, 100, 220, 0.35),
+      inset 0 -3px 8px rgba(60, 100, 220, 0.25),
+      inset 0 3px 8px rgba(255, 255, 255, 0.9);
+  }
+
+  /* ── Step Number Bubbles ────────────────── */
+  .clay-step-number {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #1E40AF;
+    background: #BFDBFE;
+    border: none;
+    box-shadow:
+      0 6px 0px rgba(29, 78, 216, 0.4),
+      0 16px 40px rgba(29, 100, 230, 0.35),
+      inset 0 -8px 18px rgba(37, 99, 235, 0.35),
+      inset 0 8px 18px rgba(255, 255, 255, 0.95);
+  }
+
+  /* ── Arrow Buttons ──────────────────────── */
+  .clay-arrow {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: none;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #2563eb;
+    box-shadow:
+      0 5px 0px rgba(60, 90, 200, 0.3),
+      0 14px 35px rgba(60, 100, 220, 0.35),
+      inset 0 -5px 12px rgba(80, 120, 220, 0.2),
+      inset 0 5px 12px rgba(255, 255, 255, 1);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  }
+  .clay-arrow:hover {
+    transform: scale(1.12);
+    box-shadow:
+      0 8px 0px rgba(60, 90, 200, 0.2),
+      0 20px 45px rgba(60, 100, 220, 0.4),
+      inset 0 -5px 12px rgba(80, 120, 220, 0.2),
+      inset 0 5px 12px rgba(255, 255, 255, 1);
+  }
+
+  /* ── Responsive Grid Layouts ────────────── */
+  .clay-features-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  @media (min-width: 768px) {
+    .clay-features-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1024px) {
+    .clay-features-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  .clay-steps-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  @media (min-width: 768px) {
+    .clay-steps-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+} /* end @layer components */
