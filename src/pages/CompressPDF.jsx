@@ -152,9 +152,9 @@ export default function CompressPDF() {
 
   /* ── compression settings per level ──────────────────────── */
   const LEVEL_CONFIG = {
-    screen:  { scale: 1.0,  jpegQuality: 0.45, tryRasterize: true  },
-    ebook:   { scale: 1.5,  jpegQuality: 0.65, tryRasterize: true  },
-    printer: { scale: null, jpegQuality: null, tryRasterize: false },
+    screen:  { scale: 0.75, jpegQuality: 0.30, tryRasterize: true },
+    ebook:   { scale: 1.0,  jpegQuality: 0.50, tryRasterize: true },
+    printer: { scale: 1.5,  jpegQuality: 0.80, tryRasterize: true },
   };
 
   /* ── helper: metadata-only compression ──────────────────── */
@@ -198,13 +198,20 @@ export default function CompressPDF() {
       canvas.width = viewport.width;
       canvas.height = viewport.height;
       const ctx = canvas.getContext('2d');
+      
+      // Fill with white background to prevent transparent-to-black issue
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
       await page.render({ canvasContext: ctx, viewport }).promise;
 
-      const jpegDataUrl = canvas.toDataURL('image/jpeg', config.jpegQuality);
-      const jpegBytes = Uint8Array.from(
-        atob(jpegDataUrl.split(',')[1]),
-        (c) => c.charCodeAt(0)
+      // Use async toBlob to avoid huge synchronous memory spikes (base64 string)
+      const blob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, 'image/jpeg', config.jpegQuality)
       );
+      
+      const arrayBuffer = await blob.arrayBuffer();
+      const jpegBytes = new Uint8Array(arrayBuffer);
 
       const jpegImage = await newPdf.embedJpg(jpegBytes);
       const origViewport = page.getViewport({ scale: 1.0 });
@@ -219,6 +226,9 @@ export default function CompressPDF() {
       canvas.height = 0;
 
       if (onProgress) onProgress(i, totalPages);
+      
+      // Yield to main thread so the progress bar UI has time to redraw
+      await new Promise((r) => setTimeout(r, 0));
     }
 
     newPdf.setAuthor('');
@@ -236,7 +246,7 @@ export default function CompressPDF() {
     return new Blob([bytes], { type: 'application/pdf' });
   };
 
-  /* ── compress — dual approach: try both, pick smallest ──── */
+  /* ── compress — try multiple approaches, pick smallest ──── */
   const handleCompress = async () => {
     if (!pdfFile) return;
     setProcessing(true);
@@ -257,19 +267,22 @@ export default function CompressPDF() {
       setProgress(15);
 
       const config = LEVEL_CONFIG[compressionLevel];
+      const originalBlob = new Blob([arrayBuffer], { type: 'application/pdf' });
+      const candidates = [originalBlob];
 
-      // APPROACH 1: Always do metadata-only compression first
+      // APPROACH 1: Metadata strip + object-stream re-save
       setProgress(20);
-      const metadataBlob = await compressMetadataOnly(
-        PDFDocument,
-        arrayBuffer,
-        compressionLevel === 'screen'
-      );
-      setProgress(35);
+      try {
+        const metadataBlob = await compressMetadataOnly(
+          PDFDocument,
+          arrayBuffer,
+          compressionLevel === 'screen'
+        );
+        candidates.push(metadataBlob);
+      } catch { /* metadata strip failed, continue */ }
+      setProgress(30);
 
-      let bestBlob = metadataBlob;
-
-      // APPROACH 2: For Screen/Ebook, also try rasterize approach
+      // APPROACH 2: Rasterize pages to JPEG (all levels now try this)
       if (config.tryRasterize) {
         try {
           const rasterBlob = await compressRasterize(
@@ -277,20 +290,18 @@ export default function CompressPDF() {
             arrayBuffer,
             config,
             (current, total) => {
-              setProgress(35 + Math.round((current / total) * 55));
+              setProgress(30 + Math.round((current / total) * 60));
             }
           );
-
-          // Pick whichever is SMALLER
-          if (rasterBlob.size < metadataBlob.size) {
-            bestBlob = rasterBlob;
-          }
-        } catch {
-          // Rasterize failed — fall back to metadata-only result
-        }
+          candidates.push(rasterBlob);
+        } catch { /* rasterize failed, continue with other candidates */ }
       }
 
       setProgress(95);
+
+      // Pick the SMALLEST candidate — never return a file bigger than the original
+      candidates.sort((a, b) => a.size - b.size);
+      const bestBlob = candidates[0];
 
       setCompressedBlob(bestBlob);
       setCompressedSize(bestBlob.size);
@@ -544,13 +555,14 @@ export default function CompressPDF() {
                       padding: '8px 12px',
                       borderRadius: 14,
                       marginBottom: 4,
-                      background: '#BBF7D0',
-                      boxShadow:
-                        '0 4px 0px rgba(21,128,61,0.35), 0 10px 24px rgba(22,163,74,0.28), inset 0 -4px 10px rgba(22,163,74,0.22), inset 0 4px 10px rgba(255,255,255,0.9)',
+                      background: savedPercent > 0 ? '#BBF7D0' : '#FEF3C7',
+                      boxShadow: savedPercent > 0
+                        ? '0 4px 0px rgba(21,128,61,0.35), 0 10px 24px rgba(22,163,74,0.28), inset 0 -4px 10px rgba(22,163,74,0.22), inset 0 4px 10px rgba(255,255,255,0.9)'
+                        : '0 4px 0px rgba(161,98,7,0.25), 0 10px 24px rgba(202,138,4,0.18), inset 0 -4px 10px rgba(202,138,4,0.15), inset 0 4px 10px rgba(255,255,255,0.9)',
                     }}
                   >
-                    <p style={{ fontSize: '1.1rem', fontWeight: 900, color: '#14532D', margin: 0 }}>
-                      -{savedPercent}%
+                    <p style={{ fontSize: '1.1rem', fontWeight: 900, color: savedPercent > 0 ? '#14532D' : '#92400E', margin: 0 }}>
+                      {savedPercent > 0 ? `-${savedPercent}%` : '~0%'}
                     </p>
                   </div>
                   <span style={{ fontSize: '1.2rem' }}>→</span>
@@ -578,47 +590,49 @@ export default function CompressPDF() {
               </div>
 
               {/* Savings bar */}
-              <div style={{ marginTop: 14 }}>
-                <div
-                  style={{
-                    position: 'relative',
-                    height: 10,
-                    borderRadius: 999,
-                    background: '#FEE2E2',
-                    overflow: 'visible',
-                    boxShadow: 'inset 0 2px 6px rgba(220,38,38,0.15)',
-                  }}
-                >
+              {savedPercent > 0 && (
+                <div style={{ marginTop: 14 }}>
                   <div
                     style={{
-                      position: 'absolute',
-                      left: 0,
-                      top: 0,
-                      height: '100%',
-                      width: `${100 - savedPercent}%`,
+                      position: 'relative',
+                      height: 10,
                       borderRadius: 999,
-                      background: 'linear-gradient(90deg, #22C55E, #16A34A)',
-                      boxShadow: '0 0 8px rgba(34,197,94,0.5)',
-                      transition: 'width 1s cubic-bezier(0.34,1.2,0.64,1)',
+                      background: '#FEE2E2',
+                      overflow: 'visible',
+                      boxShadow: 'inset 0 2px 6px rgba(220,38,38,0.15)',
                     }}
-                  />
+                  >
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        height: '100%',
+                        width: `${100 - savedPercent}%`,
+                        borderRadius: 999,
+                        background: 'linear-gradient(90deg, #22C55E, #16A34A)',
+                        boxShadow: '0 0 8px rgba(34,197,94,0.5)',
+                        transition: 'width 1s cubic-bezier(0.34,1.2,0.64,1)',
+                      }}
+                    />
+                  </div>
+                  <p
+                    style={{
+                      textAlign: 'center',
+                      fontSize: '0.75rem',
+                      color: '#15803D',
+                      fontWeight: 700,
+                      marginTop: 6,
+                    }}
+                  >
+                    You saved {formatFileSize(originalSize - compressedSize)}
+                  </p>
                 </div>
-                <p
-                  style={{
-                    textAlign: 'center',
-                    fontSize: '0.75rem',
-                    color: '#15803D',
-                    fontWeight: 700,
-                    marginTop: 6,
-                  }}
-                >
-                  You saved {formatFileSize(originalSize - compressedSize)}
-                </p>
-              </div>
+              )}
             </div>
 
-            {/* Edge case: <5% savings */}
-            {savedPercent < 5 && (
+            {/* Edge case: minimal or no savings */}
+            {savedPercent <= 5 && (
               <div
                 style={{
                   borderRadius: 14,
@@ -633,8 +647,9 @@ export default function CompressPDF() {
               >
                 <span>ℹ️</span>
                 <p style={{ fontSize: '0.78rem', color: '#92400E', margin: 0, fontWeight: 500 }}>
-                  This PDF was already well-optimized. Minimal additional compression was possible — this
-                  is normal for PDFs created by modern tools.
+                  {savedPercent <= 0
+                    ? 'This PDF is already as compact as possible. No further compression could reduce its size — your original file is returned unchanged.'
+                    : 'This PDF was already well-optimized. Minimal additional compression was possible — this is normal for PDFs created by modern tools.'}
                 </p>
               </div>
             )}
@@ -1012,46 +1027,46 @@ export default function CompressPDF() {
             </div>
 
             {/* 3C — What Gets Removed */}
-            {compressionLevel !== 'printer' && (
-              <div
-                style={{
-                  borderRadius: 16,
-                  padding: '12px 16px',
-                  marginBottom: 20,
-                  background: 'rgba(255,255,255,0.15)',
-                  border: '1px solid rgba(255,255,255,0.25)',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 10,
-                }}
-              >
-                <span style={{ fontSize: '1rem', flexShrink: 0, marginTop: 1 }}>🧹</span>
-                <div>
-                  <p
-                    style={{
-                      color: 'rgba(255,255,255,0.95)',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      margin: '0 0 3px',
-                    }}
-                  >
-                    How it works:
-                  </p>
-                  <p
-                    style={{
-                      color: 'rgba(255,255,255,0.75)',
-                      fontSize: '0.75rem',
-                      margin: 0,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {compressionLevel === 'screen'
-                      ? 'Each page is re-rendered as a compressed JPEG image at screen resolution. Fonts, vectors, and metadata are removed for maximum size reduction.'
-                      : 'Each page is re-rendered as a quality JPEG image at 1.5x resolution. Good balance of file size and visual quality.'}
-                  </p>
-                </div>
+            <div
+              style={{
+                borderRadius: 16,
+                padding: '12px 16px',
+                marginBottom: 20,
+                background: 'rgba(255,255,255,0.15)',
+                border: '1px solid rgba(255,255,255,0.25)',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 10,
+              }}
+            >
+              <span style={{ fontSize: '1rem', flexShrink: 0, marginTop: 1 }}>🧹</span>
+              <div>
+                <p
+                  style={{
+                    color: 'rgba(255,255,255,0.95)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    margin: '0 0 3px',
+                  }}
+                >
+                  How it works:
+                </p>
+                <p
+                  style={{
+                    color: 'rgba(255,255,255,0.75)',
+                    fontSize: '0.75rem',
+                    margin: 0,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {compressionLevel === 'screen'
+                    ? 'Pages are re-rendered as aggressively compressed JPEG images at screen resolution. Fonts, vectors, and metadata are stripped for maximum size reduction.'
+                    : compressionLevel === 'ebook'
+                    ? 'Pages are re-rendered as quality JPEG images at standard resolution. Good balance of file size and visual clarity.'
+                    : 'Pages are re-rendered at high resolution and quality. Metadata is stripped while preserving visual fidelity for print.'}
+                </p>
               </div>
-            )}
+            </div>
 
             {/* 3D — Compress Button */}
             <button

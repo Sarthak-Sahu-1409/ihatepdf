@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Shield,
@@ -81,6 +81,16 @@ export default function Landing() {
       iconColor: '#854d0e',
       accentColor: '#ca8a04',
     },
+    {
+      name: 'Watermark PDF',
+      path: '/watermark',
+      emoji3D: 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@latest/assets/Droplet/3D/droplet_3d.png',
+      desc: 'Stamp text or logo on every page with live preview.',
+      clayClass: 'clay-teal',
+      iconBg: '#A5F3FC',
+      iconColor: '#0e7490',
+      accentColor: '#06b6d4',
+    },
   ];
 
   const features = [
@@ -120,6 +130,8 @@ export default function Landing() {
   const [paused, setPaused] = useState(false);
   const [cardsToShow, setCardsToShow] = useState(3);
   const [pencilKey, setPencilKey] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const containerRef = useRef(null);
 
   /* Re-trigger pencil draw every 10 s */
   useEffect(() => {
@@ -130,10 +142,17 @@ export default function Landing() {
   useEffect(() => {
     const updateCards = () => {
       setCardsToShow(window.innerWidth < 768 ? 1 : 3);
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
     };
     updateCards();
     window.addEventListener('resize', updateCards);
-    return () => window.removeEventListener('resize', updateCards);
+    const t = setTimeout(updateCards, 100);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', updateCards);
+    };
   }, []);
 
   const lastIndex = tools.length - 1;
@@ -152,13 +171,25 @@ export default function Landing() {
   /* Card width + gap for transform calculation */
   const cardWidth = 200; // Exact requested width
   const gap = 24;
-
-  /* Calculate scroll offset: position track so `current` is in the center */
-  // On desktop (3 cards visible if smaller, but now these are huge), we center current card.
   const step = cardWidth + gap;
+  const trackWidth = tools.length * step - gap;
 
-  /* Center the current card using CSS calc — works for ALL indices including 0 and last */
-  const centerOffset = `calc(50% - ${current * step + cardWidth / 2}px)`;
+  // Calculate clamped offset to prevent empty spaces at the edges
+  let finalTranslate = 0;
+  if (containerWidth > 0) {
+    if (cardsToShow === 1 || trackWidth <= containerWidth) {
+      // Mobile or small track: center the current card safely
+      finalTranslate = (containerWidth / 2) - (current * step + cardWidth / 2);
+    } else {
+      // Desktop: bound the scrolling so we never see large empty space on the left or right
+      const maxScrollLeft = 0;
+      const maxScrollRight = containerWidth - trackWidth; // negative value
+      const desiredTranslate = (containerWidth / 2) - (current * step + cardWidth / 2);
+      
+      // Clamp between maxScrollRight (most negative) and maxScrollLeft (0)
+      finalTranslate = Math.max(maxScrollRight, Math.min(maxScrollLeft, desiredTranslate));
+    }
+  }
 
   return (
     <div style={{ minHeight: '100vh', overflowX: 'hidden', fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -364,6 +395,7 @@ export default function Landing() {
 
             {/* Track — outer clip container */}
             <div
+              ref={containerRef}
               style={{ overflow: 'hidden', margin: '0 56px', padding: '20px 0' }}
               onMouseEnter={() => setPaused(true)}
               onMouseLeave={() => setPaused(false)}
@@ -371,7 +403,8 @@ export default function Landing() {
               <div
                 className="clay-carousel-track"
                 style={{
-                  transform: `translateX(${centerOffset})`,
+                  transform: `translateX(${finalTranslate}px)`,
+                  width: trackWidth,
                 }}
               >
                 {tools.map((tool, i) => {
@@ -531,8 +564,27 @@ export default function Landing() {
                 background: 'linear-gradient(145deg, #EFF6FF 0%, #DBEAFE 100%)',
               }}
             >
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#1e293b', textAlign: 'center', marginBottom: '16px' }}>
-                Three Simple Steps
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#1e293b', textAlign: 'center', marginBottom: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
+                <span style={{
+                  display: 'inline-block',
+                  height: '1.2em',
+                  overflow: 'hidden',
+                  animation: 'wordWidth 4.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite',
+                  position: 'relative',
+                  textAlign: 'center',
+                  whiteSpace: 'nowrap'
+                }}>
+                  <span style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    animation: 'slideWords 4.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite'
+                  }}>
+                    <span style={{ height: '1.2em', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Three</span>
+                    <span style={{ height: '1.2em', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>3</span>
+                    <span style={{ height: '1.2em', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Three</span>
+                  </span>
+                </span>
+                <span>Simple Steps</span>
               </h2>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
                 {[
@@ -568,6 +620,16 @@ export default function Landing() {
                 @keyframes arrowPulseDown {
                   0%, 100% { opacity: 0.5; transform: translateY(0); }
                   50%       { opacity: 1;   transform: translateY(3px); }
+                }
+                @keyframes wordWidth {
+                  0%, 35% { width: 3.4em; }
+                  45%, 85% { width: 0.8em; }
+                  95%, 100% { width: 3.4em; }
+                }
+                @keyframes slideWords {
+                  0%, 35% { transform: translateY(0); }
+                  45%, 85% { transform: translateY(-33.333%); }
+                  95%, 100% { transform: translateY(-66.666%); }
                 }
               `}</style>
             </div>

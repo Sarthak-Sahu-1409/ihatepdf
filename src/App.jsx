@@ -11,6 +11,7 @@ const CompressPDF = lazy(() => import('./pages/CompressPDF'));
 const PDFtoJPG = lazy(() => import('./pages/PDFtoJPG'));
 const JPGtoPDF = lazy(() => import('./pages/JPGtoPDF'));
 const SignPDF = lazy(() => import('./pages/SignPDF'));
+const WatermarkPDF = lazy(() => import('./pages/WatermarkPDF'));
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
             <Route path="/pdf-to-jpg" element={<PDFtoJPG />} />
             <Route path="/jpg-to-pdf" element={<JPGtoPDF />} />
             <Route path="/sign" element={<SignPDF />} />
+            <Route path="/watermark" element={<WatermarkPDF />} />
           </Routes>
         </Suspense>
       </BrowserRouter>

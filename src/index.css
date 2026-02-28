@@ -23,7 +23,7 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background:
-    linear-gradient(135deg, #43C6DB 0%, #2196F3 25%, #1976D2 50%, #42A5F5 75%, #4FC3F7 100%);
+    radial-gradient(ellipse at top, #38bdf8 0%, #077bba 40%, #2052d1 100%);
   background-attachment: fixed;
 }
 
@@ -138,6 +138,15 @@ body {
     box-shadow: 0 6px 0px #EAB308;
   }
   .clay-yellow:hover {
+    transform: scale(1.02);
+  }
+
+  .clay-teal {
+    background: #A5F3FC; /* 10% lighter */
+    border: 3px solid #06B6D4;
+    box-shadow: 0 6px 0px #0E7490;
+  }
+  .clay-teal:hover {
     transform: scale(1.02);
   }
 
