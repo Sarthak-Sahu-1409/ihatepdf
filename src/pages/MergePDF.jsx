@@ -1186,6 +1186,7 @@ export default function MergePDF() {
               flexWrap: 'wrap',
               overflow: 'visible',
               marginTop: 24,
+              marginBottom: 40,
               maxWidth: 720,
               marginLeft: 'auto',
               marginRight: 'auto',

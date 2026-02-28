@@ -368,20 +368,30 @@ export default function SplitPDF() {
             </div>
 
             {/* Split Another button */}
-            <button
-              onClick={handleReset}
-              style={{
-                width: '100%', padding: 12, borderRadius: 16, border: 'none',
-                background: 'rgba(255,255,255,0.7)', color: '#6D28D9',
-                fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer',
-                boxShadow: '0 4px 0px rgba(109,40,217,0.15), 0 10px 24px rgba(124,58,237,0.12), inset 0 -3px 8px rgba(109,40,217,0.1), inset 0 3px 8px rgba(255,255,255,0.95)',
-                transition: 'transform 0.2s ease',
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={handleReset}
+                style={{
+                  flex: 1, padding: 12, borderRadius: 16, border: 'none',
+                  background: 'rgba(255,255,255,0.7)', color: '#6D28D9',
+                  fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer',
+                  boxShadow: '0 4px 0px rgba(109,40,217,0.15), 0 10px 24px rgba(124,58,237,0.12), inset 0 -3px 8px rgba(109,40,217,0.1), inset 0 3px 8px rgba(255,255,255,0.95)',
+                  transition: 'transform 0.2s ease',
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                ✂️ Split Another PDF
+              </button>
+              <Link to="/" style={{
+                flex: 1, padding: 12, borderRadius: 16, background: 'rgba(255,255,255,0.7)', color: '#3730A3', fontWeight: 700, fontSize: '0.92rem', textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 0px rgba(55,48,163,0.15), 0 10px 24px rgba(60,100,220,0.12), inset 0 -3px 8px rgba(100,130,220,0.1), inset 0 3px 8px rgba(255,255,255,0.95)', transition: 'transform 0.2s ease'
               }}
               onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
               onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-            >
-              ✂️ Split Another PDF
-            </button>
+              >
+                ← Back to Tools
+              </Link>
+            </div>
           </div>
         )}
 

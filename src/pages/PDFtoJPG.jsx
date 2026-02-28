@@ -359,7 +359,7 @@ export default function PDFtoJPG() {
 
         {/* ─── SECTION 3: SETTINGS + LIVE PREVIEW ──────────── */}
         {pdfFile && !isSuccess && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16, alignItems: 'start' }}>
 
             {/* LEFT: Settings */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -526,18 +526,6 @@ export default function PDFtoJPG() {
                 )}
               </div>
 
-              {/* Estimated output */}
-              <div style={{
-                borderRadius: 16, padding: '12px 16px',
-                background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)',
-                display: 'flex', alignItems: 'center', gap: 10,
-              }}>
-                <span style={{ fontSize: '1rem' }}>📦</span>
-                <div>
-                  <p style={{ color: 'rgba(255,255,255,0.95)', fontSize: '0.8rem', fontWeight: 700, margin: '0 0 1px' }}>Estimated output</p>
-                  <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.75rem', margin: 0 }}>~{estimatedOutputSize()} • {getPageCountToConvert()} images</p>
-                </div>
-              </div>
             </div>
 
             {/* RIGHT: Live Preview */}
@@ -545,7 +533,7 @@ export default function PDFtoJPG() {
               <div style={{
                 borderRadius: 24, padding: 16, background: '#FED7AA',
                 boxShadow: '0 7px 0px rgba(194,65,12,0.4), 0 20px 55px rgba(234,88,12,0.32), inset 0 -10px 22px rgba(234,88,12,0.26), inset 0 10px 22px rgba(255,255,255,0.9)',
-                flex: 1, display: 'flex', flexDirection: 'column',
+                display: 'flex', flexDirection: 'column',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <p style={{ fontWeight: 700, color: '#431407', fontSize: '0.82rem', margin: 0 }}>👁️ Live Preview — Page 1</p>
@@ -558,13 +546,13 @@ export default function PDFtoJPG() {
                 </div>
 
                 <div style={{
-                  borderRadius: 14, overflow: 'hidden', flex: 1,
+                  borderRadius: 14, overflow: 'hidden',
                   background: '#FEF3C7', minHeight: 200,
                   boxShadow: '0 4px 0px rgba(194,65,12,0.22), 0 12px 28px rgba(234,88,12,0.18), inset 0 -4px 10px rgba(234,88,12,0.12), inset 0 4px 10px rgba(255,255,255,0.8)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   {previewDataUrl ? (
-                    <img src={previewDataUrl} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} alt="Preview" />
+                    <img src={previewDataUrl} style={{ width: '100%', maxHeight: 600, height: 'auto', objectFit: 'contain', display: 'block' }} alt="Preview" />
                   ) : (
                     <div style={{ textAlign: 'center', color: '#EA580C' }}>
                       <div style={{ fontSize: '2rem', marginBottom: 8 }}>🖼️</div>
@@ -597,9 +585,10 @@ export default function PDFtoJPG() {
             background: 'linear-gradient(135deg, #FEF3C7, #FED7AA)',
             boxShadow: '0 8px 0px rgba(194,65,12,0.3), 0 24px 65px rgba(234,88,12,0.32), inset 0 -10px 24px rgba(234,88,12,0.2), inset 0 10px 24px rgba(255,255,255,0.95)',
             display: 'flex', alignItems: 'center', gap: 12,
-            marginTop: 16, overflow: 'visible',
+            marginTop: 32, marginBottom: 40, overflow: 'visible',
+            flexWrap: 'wrap', justifyContent: 'space-between',
           }}>
-            <div style={{ display: 'flex', gap: 8, flex: 1, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <div style={statPill}>🖼️ {getPageCountToConvert()} images</div>
               <div style={statPill}>📦 ~{estimatedOutputSize()}</div>
               <div style={statPill}>{scaleLabels[scale]}</div>
@@ -705,15 +694,28 @@ export default function PDFtoJPG() {
             </div>
 
             {/* Convert Another */}
-            <button onClick={handleReset} style={{
-              width: '100%', padding: 12, borderRadius: 16, border: '2px dashed rgba(255,255,255,0.35)',
-              background: 'rgba(255,255,255,0.2)', color: 'white',
-              fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            }}>
-              🖼️ Convert Another PDF
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={handleReset} style={{
+                flex: 1, padding: 12, borderRadius: 16, border: '2px dashed rgba(255,255,255,0.35)',
+                background: 'rgba(255,255,255,0.2)', color: 'white',
+                fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+              >
+                🖼️ Convert Another PDF
+              </button>
+              <Link to="/" style={{
+                flex: 1, padding: 12, borderRadius: 16, border: 'none', background: 'rgba(255,255,255,0.85)', color: '#9A3412', fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 0px rgba(154,52,18,0.2), 0 10px 24px rgba(194,65,12,0.15), inset 0 -3px 8px rgba(194,65,12,0.1), inset 0 3px 8px rgba(255,255,255,0.95)', transition: 'transform 0.2s ease'
+              }}
+              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                ← Back to Tools
+              </Link>
+            </div>
           </div>
         )}
       </div>

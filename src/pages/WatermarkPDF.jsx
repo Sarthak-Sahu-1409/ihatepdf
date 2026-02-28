@@ -404,29 +404,77 @@ export default function WatermarkPDF() {
         setCurrentPage(i + 1);
         const page = pages[pageIdx];
         const { width: pageW, height: pageH } = page.getSize();
+        const pageRotation = page.getRotation().angle;
+        // When drawing on a rotated page in pdf-lib, the origin (0,0) and the axes rotate.
+        // We calculate the unrotated bounding box to figure out where we *want* it to be:
+        const isLandscapeRotated = pageRotation === 90 || pageRotation === 270;
+        const unrotatedW = isLandscapeRotated ? pageH : pageW;
+        const unrotatedH = isLandscapeRotated ? pageW : pageH;
 
         if (wmType === 'text' && font) {
           const textW = font.widthOfTextAtSize(wmText, fontSize);
           const textH = font.heightAtSize(fontSize);
-          const { x, y } = getPdfPosition(pageW, pageH, wmPosition, textW, textH);
+          
+          let { x, y } = getPdfPosition(unrotatedW, unrotatedH, wmPosition, textW, textH);
           const { r, g, b } = hexToRgb(wmColor);
+
+          // Find the center of our bounding box in unrotated coords
+          const cx = x + textW / 2;
+          const cy = y + textH / 2;
+
+          page.pushOperators(
+            await import('pdf-lib').then(m => m.concatTransformationMatrix(1, 0, 0, 1, cx, cy)),
+            await import('pdf-lib').then(m => {
+              const rad = degrees(rotation - pageRotation).angle;
+              return m.concatTransformationMatrix(
+                Math.cos(rad), Math.sin(rad),
+                -Math.sin(rad), Math.cos(rad),
+                0, 0
+              );
+            })
+          );
+
           page.drawText(wmText, {
-            x, y,
+            x: -textW / 2,
+            y: -textH / 2,
             size: fontSize,
             font,
             color: rgb(r, g, b),
             opacity,
-            rotate: degrees(rotation),
           });
+
+          page.pushOperators(await import('pdf-lib').then(m => m.popGraphicsState()));
+
         } else if (wmType === 'image' && embeddedImg) {
-          const scale = (pageW * imgScalePercent / 100) / embeddedImg.width;
+          const scale = (unrotatedW * imgScalePercent / 100) / embeddedImg.width;
           const drawW = embeddedImg.width  * scale;
           const drawH = embeddedImg.height * scale;
-          const { x, y } = getPdfPosition(pageW, pageH, wmPosition, drawW, drawH);
+          
+          let { x, y } = getPdfPosition(unrotatedW, unrotatedH, wmPosition, drawW, drawH);
+          
+          const cx = x + drawW / 2;
+          const cy = y + drawH / 2;
+
+          page.pushOperators(
+            await import('pdf-lib').then(m => m.concatTransformationMatrix(1, 0, 0, 1, cx, cy)),
+            await import('pdf-lib').then(m => {
+              const rad = degrees(-pageRotation).angle;
+              return m.concatTransformationMatrix(
+                Math.cos(rad), Math.sin(rad),
+                -Math.sin(rad), Math.cos(rad),
+                0, 0
+              );
+            })
+          );
+
           page.drawImage(embeddedImg, {
-            x, y, width: drawW, height: drawH,
+            x: -drawW / 2,
+            y: -drawH / 2,
+            width: drawW, height: drawH,
             opacity,
           });
+
+          page.pushOperators(await import('pdf-lib').then(m => m.popGraphicsState()));
         }
 
         setProgress(Math.round(((i + 1) / targetIndices.length) * 100));
@@ -809,6 +857,7 @@ export default function WatermarkPDF() {
                 gridTemplateColumns: '1fr 1fr',
                 gap: '16px',
                 marginBottom: '16px',
+                alignItems: 'start',
               }}>
 
                 {/* ══ LEFT COLUMN — SETTINGS ══ */}
@@ -1049,7 +1098,6 @@ export default function WatermarkPDF() {
                     borderRadius: '24px', padding: '16px',
                     background: '#CFFAFE',
                     boxShadow: '0 7px 0px rgba(14,116,144,0.4), 0 20px 55px rgba(6,182,212,0.32), inset 0 -10px 22px rgba(6,182,212,0.26), inset 0 10px 22px rgba(255,255,255,0.9)',
-                    position: 'sticky', top: '20px',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center',
                                   justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -1195,10 +1243,10 @@ export default function WatermarkPDF() {
                 borderRadius: '24px', padding: '16px 20px',
                 background: 'linear-gradient(135deg, #ECFEFF, #CFFAFE)',
                 boxShadow: '0 8px 0px rgba(14,116,144,0.3), 0 24px 65px rgba(6,182,212,0.32), inset 0 -10px 24px rgba(6,182,212,0.2), inset 0 10px 24px rgba(255,255,255,0.95)',
-                display: 'flex', alignItems: 'center', gap: '12px',
-                marginTop: '16px', overflow: 'visible',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px',
+                marginTop: '32px', marginBottom: '40px', overflow: 'visible', flexWrap: 'wrap',
               }}>
-                <div style={{ display: 'flex', gap: '8px', flex: 1, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <div style={statPill}>
                     {wmType === 'text' ? `"${wmText || '…'}"` : '🖼️ Image'}
                   </div>
@@ -1216,7 +1264,7 @@ export default function WatermarkPDF() {
                       : 'linear-gradient(160deg, #22D3EE, #0E7490)',
                     color: 'white', fontWeight: 800, fontSize: '0.95rem',
                     cursor: (!isReadyToApply() || processing) ? 'not-allowed' : 'pointer',
-                    whiteSpace: 'nowrap', flexShrink: 0,
+                    whiteSpace: 'nowrap',
                     boxShadow: (!isReadyToApply() || processing) ? 'none'
                       : '0 5px 0px rgba(14,116,144,0.55), 0 14px 36px rgba(6,182,212,0.45), inset 0 -5px 12px rgba(14,116,144,0.35), inset 0 5px 12px rgba(207,250,254,0.4)',
                     transition: 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',

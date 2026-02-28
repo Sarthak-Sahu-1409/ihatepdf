@@ -567,13 +567,13 @@ export default function SignPDF() {
 
         {/* STICKY ACTION BAR — Apply All */}
         {pdfFile && placed.length > 0 && !isSuccess && (
-          <div style={{ position:'sticky', bottom:20, zIndex:40, borderRadius:24, padding:'16px 20px', background:'linear-gradient(135deg,#FEF9C3,#FEF08A)', boxShadow:'0 8px 0px rgba(161,98,7,0.3), 0 24px 65px rgba(202,138,4,0.32), inset 0 -10px 24px rgba(202,138,4,0.2), inset 0 10px 24px rgba(255,255,255,0.95)', display:'flex', alignItems:'center', gap:12, marginTop:16 }}>
-            <div style={{ display:'flex', gap:8, flex:1, flexWrap:'wrap' }}>
+          <div style={{ position:'sticky', bottom:20, zIndex:40, borderRadius:24, padding:'16px 20px', background:'linear-gradient(135deg,#FEF9C3,#FEF08A)', boxShadow:'0 8px 0px rgba(161,98,7,0.3), 0 24px 65px rgba(202,138,4,0.32), inset 0 -10px 24px rgba(202,138,4,0.2), inset 0 10px 24px rgba(255,255,255,0.95)', display:'flex', alignItems:'center', justifyContent: 'space-between', gap:16, marginTop:32, marginBottom:40, flexWrap: 'wrap' }}>
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
               <div style={spl}>📄 {pageCount} page doc</div>
               <div style={spl}>✍️ {placed.length} signature{placed.length !== 1 ? 's' : ''} placed</div>
               {sigDataUrl && <div style={{ ...spl, background:'rgba(254,240,138,0.9)', color:'#7C2D00' }}>⚠️ 1 pending — click Add first</div>}
             </div>
-            <button onClick={handleApplyAll} disabled={processing} style={{ padding:'12px 28px', borderRadius:16, border:'none', background: processing ? 'linear-gradient(160deg,#94A3B8,#64748B)' : 'linear-gradient(160deg,#FACC15,#A16207)', color:'white', fontWeight:800, fontSize:'0.95rem', cursor: processing ? 'not-allowed' : 'pointer', whiteSpace:'nowrap', flexShrink:0, boxShadow: processing ? 'none' : BS, transition:'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)', display:'flex', alignItems:'center', gap:6 }} onMouseEnter={e => { if (!processing) e.currentTarget.style.transform='translateY(-4px) scale(1.02)'; }} onMouseLeave={e => { e.currentTarget.style.transform='translateY(0) scale(1)'; }}>
+            <button onClick={handleApplyAll} disabled={processing} style={{ padding:'12px 28px', borderRadius:16, border:'none', background: processing ? 'linear-gradient(160deg,#94A3B8,#64748B)' : 'linear-gradient(160deg,#FACC15,#A16207)', color:'white', fontWeight:800, fontSize:'0.95rem', cursor: processing ? 'not-allowed' : 'pointer', whiteSpace:'nowrap', boxShadow: processing ? 'none' : BS, transition:'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)', display:'flex', alignItems:'center', gap:6 }} onMouseEnter={e => { if (!processing) e.currentTarget.style.transform='translateY(-4px) scale(1.02)'; }} onMouseLeave={e => { e.currentTarget.style.transform='translateY(0) scale(1)'; }}>
               {processing ? <><Loader2 size={16} style={{ animation:'spin 1s linear infinite' }} /> Signing…</> : <>✍️ Apply All &amp; Download</>}
             </button>
           </div>
