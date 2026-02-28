@@ -142,7 +142,7 @@ export default function Landing() {
     if (paused) return;
     const interval = setInterval(() => {
       setCurrent((c) => (c >= lastIndex ? 0 : c + 1));
-    }, 3500);
+    }, 2000);
     return () => clearInterval(interval);
   }, [paused, lastIndex, current]);
 
