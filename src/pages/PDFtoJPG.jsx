@@ -195,6 +195,8 @@ export default function PDFtoJPG() {
         setCompletedThumbs(prev => [...prev, dataUrl]);
         setProgress(Math.round(((i - startPage + 1) / total) * 100));
         canvas.width = 0; canvas.height = 0;
+
+        await new Promise((r) => setTimeout(r, 0));
       }
 
       setOutputImages(outputs);

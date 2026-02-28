@@ -205,6 +205,8 @@ export default function JPGtoPDF() {
 
         page.drawImage(embeddedImage, { x: drawX, y: drawY, width: drawW, height: drawH });
         setProgress(Math.round(((i + 1) / images.length) * 92));
+
+        await new Promise((r) => setTimeout(r, 0));
       }
 
       const bytes = await pdfDoc.save();

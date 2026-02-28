@@ -4,13 +4,19 @@ import { Upload, X, Download, Loader2, Plus } from 'lucide-react';
 import SignaturePad from '../components/features/SignaturePad';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
+// Signature fonts bundled locally — no CDN needed, works fully offline
+import '@fontsource/dancing-script/700.css';
+import '@fontsource/pacifico/400.css';
+import '@fontsource/satisfy/400.css';
+import '@fontsource/pinyon-script/400.css';
+
 const fmt = (b) => b < 1048576 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(2)+' MB';
 
 const FONTS = {
-  dancing: { name:'Elegant',  family:"'Dancing Script',cursive", url:'https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap' },
-  pacifico:{ name:'Casual',   family:"'Pacifico',cursive",       url:'https://fonts.googleapis.com/css2?family=Pacifico&display=swap' },
-  satisfy: { name:'Flowing',  family:"'Satisfy',cursive",        url:'https://fonts.googleapis.com/css2?family=Satisfy&display=swap' },
-  pinyon:  { name:'Formal',   family:"'Pinyon Script',cursive",  url:'https://fonts.googleapis.com/css2?family=Pinyon+Script&display=swap' },
+  dancing: { name: 'Elegant', family: "'Dancing Script',cursive" },
+  pacifico: { name: 'Casual',  family: "'Pacifico',cursive" },
+  satisfy:  { name: 'Flowing', family: "'Satisfy',cursive" },
+  pinyon:   { name: 'Formal',  family: "'Pinyon Script',cursive" },
 };
 const COLORS = ['#1E293B','#1E3A8A','#166534','#7C2D12'];
 
@@ -99,15 +105,7 @@ export default function SignPDF() {
 
   useEffect(() => { if (pdfDocRef.current) renderPage(sigPage); }, [sigPage]);
 
-  /* Google Fonts */
-  useEffect(() => {
-    const id = `gfont-${selFont}`;
-    if (!document.getElementById(id)) {
-      const link = document.createElement('link');
-      link.id = id; link.rel = 'stylesheet'; link.href = FONTS[selFont].url;
-      document.head.appendChild(link);
-    }
-  }, [selFont]);
+  // Signature fonts are imported at the top of this file via @fontsource — no runtime CDN load needed.
 
   /* ── drag active sig on preview ─────────────────────────────  */
   const onSigMouseDown = (e) => {
@@ -238,6 +236,8 @@ export default function SignPDF() {
           x: coords.x, y: coords.y, width: coords.width, height: coords.height, opacity: coords.opacity,
         });
         setProgress(35 + Math.round(((i + 1) / placed.length) * 55));
+
+        await new Promise((r) => setTimeout(r, 0));
       }
 
       const bytes = await pdfDoc.save({ useObjectStreams: true });

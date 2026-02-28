@@ -79,20 +79,32 @@ function getPreviewPositionXY(cW, cH, drawW, drawH, pos) {
   }
 }
 
-/* Returns {x,y} for pdf-lib drawText/drawImage (bottom-left origin in PDF coords) */
-function getPdfPosition(pageW, pageH, pos, drawW, drawH) {
-  const m = 40;
+/* Returns the desired visual center (cx, cy) for a given position in PDF space.
+   PDF origin is bottom-left, so "top" maps to a large y, "bottom" to a small y. */
+function getPdfCenter(pageW, pageH, pos) {
+  const m = 50;
   switch (pos) {
-    case 'top':          return { x: (pageW - drawW) / 2, y: pageH - drawH - m };
-    case 'bottom':       return { x: (pageW - drawW) / 2, y: m };
-    case 'top-left':     return { x: m,                   y: pageH - drawH - m };
-    case 'top-right':    return { x: pageW - drawW - m,   y: pageH - drawH - m };
-    case 'bottom-left':  return { x: m,                   y: m };
-    case 'bottom-right': return { x: pageW - drawW - m,   y: m };
-    case 'left':         return { x: m,                   y: (pageH - drawH) / 2 };
-    case 'right':        return { x: pageW - drawW - m,   y: (pageH - drawH) / 2 };
-    default:             return { x: (pageW - drawW) / 2, y: (pageH - drawH) / 2 };
+    case 'top':          return { cx: pageW / 2,      cy: pageH - m };
+    case 'bottom':       return { cx: pageW / 2,      cy: m };
+    case 'top-left':     return { cx: pageW * 0.15,   cy: pageH - m };
+    case 'top-right':    return { cx: pageW * 0.85,   cy: pageH - m };
+    case 'bottom-left':  return { cx: pageW * 0.15,   cy: m };
+    case 'bottom-right': return { cx: pageW * 0.85,   cy: m };
+    case 'left':         return { cx: m,              cy: pageH / 2 };
+    case 'right':        return { cx: pageW - m,      cy: pageH / 2 };
+    default:             return { cx: pageW / 2,      cy: pageH / 2 };
   }
+}
+
+/* Given the desired visual center (cx,cy), the bounding box (drawW x drawH),
+   and a rotation in degrees, returns the bottom-left draw origin (x,y) that
+   pdf-lib needs so the element appears visually centered at (cx,cy) after rotation. */
+function rotationAdjustedOrigin(cx, cy, drawW, drawH, rotDeg) {
+  const r = (rotDeg * Math.PI) / 180;
+  return {
+    x: cx - (drawW / 2) * Math.cos(r) + (drawH / 2) * Math.sin(r),
+    y: cy - (drawH / 2) * Math.cos(r) - (drawW / 2) * Math.sin(r),
+  };
 }
 
 /* ── Position grid sub-component ───────────────────────────── */
@@ -404,80 +416,45 @@ export default function WatermarkPDF() {
         setCurrentPage(i + 1);
         const page = pages[pageIdx];
         const { width: pageW, height: pageH } = page.getSize();
-        const pageRotation = page.getRotation().angle;
-        // When drawing on a rotated page in pdf-lib, the origin (0,0) and the axes rotate.
-        // We calculate the unrotated bounding box to figure out where we *want* it to be:
-        const isLandscapeRotated = pageRotation === 90 || pageRotation === 270;
-        const unrotatedW = isLandscapeRotated ? pageH : pageW;
-        const unrotatedH = isLandscapeRotated ? pageW : pageH;
 
         if (wmType === 'text' && font) {
           const textW = font.widthOfTextAtSize(wmText, fontSize);
           const textH = font.heightAtSize(fontSize);
-          
-          let { x, y } = getPdfPosition(unrotatedW, unrotatedH, wmPosition, textW, textH);
+          const { cx, cy } = getPdfCenter(pageW, pageH, wmPosition);
+          // pdf-lib uses CCW-positive rotation (Y-axis up / mathematical convention).
+          // Canvas uses CW-positive rotation (Y-axis down / screen convention).
+          // Negate the angle so the PDF result matches the live preview exactly.
+          const pdfRot = -rotation;
+          const { x, y } = rotationAdjustedOrigin(cx, cy, textW, textH, pdfRot);
           const { r, g, b } = hexToRgb(wmColor);
 
-          // Find the center of our bounding box in unrotated coords
-          const cx = x + textW / 2;
-          const cy = y + textH / 2;
-
-          page.pushOperators(
-            await import('pdf-lib').then(m => m.concatTransformationMatrix(1, 0, 0, 1, cx, cy)),
-            await import('pdf-lib').then(m => {
-              const rad = degrees(rotation - pageRotation).angle;
-              return m.concatTransformationMatrix(
-                Math.cos(rad), Math.sin(rad),
-                -Math.sin(rad), Math.cos(rad),
-                0, 0
-              );
-            })
-          );
-
           page.drawText(wmText, {
-            x: -textW / 2,
-            y: -textH / 2,
+            x, y,
             size: fontSize,
             font,
             color: rgb(r, g, b),
             opacity,
+            rotate: degrees(pdfRot),
           });
 
-          page.pushOperators(await import('pdf-lib').then(m => m.popGraphicsState()));
-
         } else if (wmType === 'image' && embeddedImg) {
-          const scale = (unrotatedW * imgScalePercent / 100) / embeddedImg.width;
-          const drawW = embeddedImg.width  * scale;
-          const drawH = embeddedImg.height * scale;
-          
-          let { x, y } = getPdfPosition(unrotatedW, unrotatedH, wmPosition, drawW, drawH);
-          
-          const cx = x + drawW / 2;
-          const cy = y + drawH / 2;
-
-          page.pushOperators(
-            await import('pdf-lib').then(m => m.concatTransformationMatrix(1, 0, 0, 1, cx, cy)),
-            await import('pdf-lib').then(m => {
-              const rad = degrees(-pageRotation).angle;
-              return m.concatTransformationMatrix(
-                Math.cos(rad), Math.sin(rad),
-                -Math.sin(rad), Math.cos(rad),
-                0, 0
-              );
-            })
-          );
+          const scale  = (pageW * imgScalePercent / 100) / embeddedImg.width;
+          const drawW  = embeddedImg.width  * scale;
+          const drawH  = embeddedImg.height * scale;
+          const { cx, cy } = getPdfCenter(pageW, pageH, wmPosition);
+          // Images don't rotate in this tool, so just center the bounding box.
+          const { x, y } = rotationAdjustedOrigin(cx, cy, drawW, drawH, 0);
 
           page.drawImage(embeddedImg, {
-            x: -drawW / 2,
-            y: -drawH / 2,
+            x, y,
             width: drawW, height: drawH,
             opacity,
           });
-
-          page.pushOperators(await import('pdf-lib').then(m => m.popGraphicsState()));
         }
 
         setProgress(Math.round(((i + 1) / targetIndices.length) * 100));
+
+        await new Promise((r) => setTimeout(r, 0));
       }
 
       const outBytes = await pdfDoc.save({ useObjectStreams: true });
