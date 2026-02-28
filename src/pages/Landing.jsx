@@ -5,7 +5,6 @@ import {
   Lock,
   Zap,
   Download,
-  FileText,
   Scissors,
   Minimize2,
   Image,
@@ -199,10 +198,7 @@ export default function Landing() {
         <div className="clay-nav" style={{ padding: '12px 0' }}>
           <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-              <div className="clay-icon" style={{ width: 38, height: 38, borderRadius: 12, background: '#93C5FD' }}>
-                <FileText size={20} color="#1d4ed8" />
-              </div>
-              <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#1d4ed8', letterSpacing: '-0.02em' }}>IHatePDF</span>
+              <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#1d4ed8', letterSpacing: '-0.02em' }}>&lt;/IHatePDF&gt;</span>
             </Link>
             <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }} className="hidden sm:flex">
               <a href="#features" style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569', textDecoration: 'none', transition: 'color 0.2s' }}>Features</a>
