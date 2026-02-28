@@ -150,12 +150,11 @@ export default function Landing() {
   const next = useCallback(() => setCurrent((c) => (c >= lastIndex ? 0 : c + 1)), [lastIndex]);
 
   /* Card width + gap for transform calculation */
-  const cardWidth = 288;
+  const cardWidth = 200; // Exact requested width
   const gap = 24;
 
   /* Calculate scroll offset: position track so `current` is in the center */
-  // On desktop (3 cards visible), we add paddingLeft = 1 card+gap to the track
-  // so card 0 can sit in the center slot. translateX = current * step.
+  // On desktop (3 cards visible if smaller, but now these are huge), we center current card.
   const step = cardWidth + gap;
 
   /* Center the current card using CSS calc — works for ALL indices including 0 and last */
@@ -397,10 +396,7 @@ export default function Landing() {
                         textAlign: 'center',
                         cursor: 'pointer',
                         textDecoration: 'none',
-                        transform: isCenter ? 'scale(1.08)' : isSide ? 'scale(0.95)' : 'scale(1)',
-                        opacity: isSide ? 0.88 : 1,
                         zIndex: isCenter ? 10 : 1,
-                        transition: 'transform 0.5s cubic-bezier(0.34, 1.2, 0.64, 1), opacity 0.5s ease',
                       }}
                     >
                       {/* 3D Emoji Icon — white clay chip floats on the card */}
