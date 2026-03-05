@@ -1,6 +1,5 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AppProvider } from './context/AppContext';
 import Loading from './components/common/Loading';
 
 // Lazy load pages
@@ -15,22 +14,20 @@ const WatermarkPDF = lazy(() => import('./pages/WatermarkPDF'));
 
 function App() {
   return (
-    <AppProvider>
-      <BrowserRouter>
-        <Suspense fallback={<Loading />}>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/merge" element={<MergePDF />} />
-            <Route path="/split" element={<SplitPDF />} />
-            <Route path="/compress" element={<CompressPDF />} />
-            <Route path="/pdf-to-jpg" element={<PDFtoJPG />} />
-            <Route path="/jpg-to-pdf" element={<JPGtoPDF />} />
-            <Route path="/sign" element={<SignPDF />} />
-            <Route path="/watermark" element={<WatermarkPDF />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </AppProvider>
+    <BrowserRouter>
+      <Suspense fallback={<Loading />}>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/merge" element={<MergePDF />} />
+          <Route path="/split" element={<SplitPDF />} />
+          <Route path="/compress" element={<CompressPDF />} />
+          <Route path="/pdf-to-jpg" element={<PDFtoJPG />} />
+          <Route path="/jpg-to-pdf" element={<JPGtoPDF />} />
+          <Route path="/sign" element={<SignPDF />} />
+          <Route path="/watermark" element={<WatermarkPDF />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
   );
 }
 

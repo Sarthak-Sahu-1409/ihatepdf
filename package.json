@@ -14,17 +14,12 @@
     "@fontsource/pacifico": "^5.2.7",
     "@fontsource/pinyon-script": "^5.2.8",
     "@fontsource/satisfy": "^5.2.7",
-    "file-saver": "^2.0.5",
-    "jspdf": "^4.1.0",
     "lucide-react": "^0.563.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.4.624",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-dropzone": "^14.4.0",
-    "react-router-dom": "^7.13.0",
-    "workbox-webpack-plugin": "^7.4.0",
-    "workbox-window": "^7.4.0"
+    "react-router-dom": "^7.13.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

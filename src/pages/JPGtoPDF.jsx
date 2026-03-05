@@ -1,13 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Upload, Trash2, GripVertical, Download, Loader2, X, FileText } from 'lucide-react';
+import formatFileSize from '../utils/formatFileSize';
 
-/* ─── helpers ──────────────────────────────────────────────── */
-function formatSize(bytes) {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-}
 
 const ACCEPT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 const ACCEPT_EXT   = /\.(jpe?g|png|webp|heic|heif)$/i;
@@ -323,7 +318,7 @@ export default function JPGtoPDF() {
               <div style={{ width: 56, height: 56, borderRadius: 18, background: '#F9A8D4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', flexShrink: 0, boxShadow: S.sm }}>✅</div>
               <div style={{ flex: 1 }}>
                 <h3 style={{ fontWeight: 900, color: '#831843', fontSize: '1.2rem', margin: '0 0 4px' }}>PDF created!</h3>
-                <p style={{ color: '#BE185D', fontSize: '0.82rem', margin: 0 }}>{images.length} image{images.length !== 1 ? 's' : ''} → {images.length} page{images.length !== 1 ? 's' : ''} • {formatSize(resultSize)}</p>
+                <p style={{ color: '#BE185D', fontSize: '0.82rem', margin: 0 }}>{images.length} image{images.length !== 1 ? 's' : ''} → {images.length} page{images.length !== 1 ? 's' : ''} • {formatFileSize(resultSize)}</p>
               </div>
             </div>
 
@@ -473,7 +468,7 @@ export default function JPGtoPDF() {
                         <GripVertical size={14} color="#F9A8D4" style={{ flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontWeight: 700, fontSize: '0.68rem', color: '#831843', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{img.name}</p>
-                          <p style={{ fontSize: '0.62rem', color: '#BE185D', margin: 0 }}>{formatSize(img.size)}</p>
+                          <p style={{ fontSize: '0.62rem', color: '#BE185D', margin: 0 }}>{formatFileSize(img.size)}</p>
                         </div>
                       </div>
                     </div>
@@ -597,8 +592,6 @@ export default function JPGtoPDF() {
           </div>
         )}
       </div>
-
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

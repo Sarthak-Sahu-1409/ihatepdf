@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Upload, X, Download, Loader2, Plus } from 'lucide-react';
 import SignaturePad from '../components/features/SignaturePad';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import formatFileSize from '../utils/formatFileSize';
 
 // Signature fonts bundled locally — no CDN needed, works fully offline
 import '@fontsource/dancing-script/700.css';
@@ -10,7 +11,6 @@ import '@fontsource/pacifico/400.css';
 import '@fontsource/satisfy/400.css';
 import '@fontsource/pinyon-script/400.css';
 
-const fmt = (b) => b < 1048576 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(2)+' MB';
 
 const FONTS = {
   dancing: { name: 'Elegant', family: "'Dancing Script',cursive" },
@@ -327,7 +327,7 @@ export default function SignPDF() {
             </div>
             <div style={{ borderRadius:20, padding:'18px 20px', marginBottom:20, background:'rgba(255,255,255,0.6)', boxShadow:'inset 0 3px 10px rgba(255,255,255,0.7)' }}>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, textAlign:'center' }}>
-                {[{ emoji:'📄', value:`${pageCount} pages`, label:'Document' },{ emoji:'✍️', value:`${placed.length} signatures`, label:'Embedded' },{ emoji:'📦', value:signedSize ? fmt(signedSize) : '—', label:'File size' }].map((s,i) => (
+                {[{ emoji:'📄', value:`${pageCount} pages`, label:'Document' },{ emoji:'✍️', value:`${placed.length} signatures`, label:'Embedded' },{ emoji:'📦', value:signedSize ? formatFileSize(signedSize) : '—', label:'File size' }].map((s,i) => (
                   <div key={i}>
                     <p style={{ fontSize:'1.4rem', margin:'0 0 2px' }}>{s.emoji}</p>
                     <p style={{ fontWeight:900, color:'#422006', fontSize:'0.95rem', margin:'0 0 2px' }}>{s.value}</p>
@@ -371,7 +371,7 @@ export default function SignPDF() {
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
                   <p style={{ fontWeight:700, color:'#422006', fontSize:'0.88rem', margin:'0 0 2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{pdfFile.name}</p>
-                  <p style={{ color:'#A16207', fontSize:'0.75rem', margin:0, fontWeight:600 }}>{fmt(pdfFile.size)} · {pageCount} pages</p>
+                  <p style={{ color:'#A16207', fontSize:'0.75rem', margin:0, fontWeight:600 }}>{formatFileSize(pdfFile.size)} · {pageCount} pages</p>
                 </div>
                 <button onClick={handleReset} style={{ width:30, height:30, borderRadius:8, border:'none', background:'#FEE2E2', cursor:'pointer', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 0px rgba(185,28,28,0.25)' }}><X size={13} color="#DC2626" /></button>
               </div>
@@ -594,8 +594,6 @@ export default function SignPDF() {
           </div>
         </div>
       )}
-
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}`}</style>
     </div>
   );
 }

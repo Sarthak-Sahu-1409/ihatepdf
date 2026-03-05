@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Upload, X, Download, Loader2 } from 'lucide-react';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import formatFileSize from '../utils/formatFileSize';
 
 /* ── Shared style constants ────────────────────────────────── */
 const sectionLabel = {
@@ -26,13 +27,6 @@ const cardStyle = {
   background: '#CFFAFE',
   boxShadow: CLAY_CARD,
 };
-
-/* ── Helpers ────────────────────────────────────────────────── */
-function formatFileSize(bytes) {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-}
 
 
 const POS_GRID = [
@@ -1314,15 +1308,6 @@ export default function WatermarkPDF() {
         )}
 
       </div>
-
-      {/* Global keyframe styles */}
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.08); }
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,20 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Shield,
   Lock,
   Zap,
-  Download,
-  Scissors,
-  Minimize2,
-  Image,
-  FileImage,
-  PenTool,
   ChevronLeft,
   ChevronRight,
   WifiOff,
   UserX,
-  Check,
 } from 'lucide-react';
 
 export default function Landing() {
