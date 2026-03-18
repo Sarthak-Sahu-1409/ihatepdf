@@ -1,8 +1,45 @@
 import React, { useState } from "react";
 import { Lock, Zap, Globe } from "lucide-react";
+import { GlowingEffect } from "./glowing-effect";
 
 // Native pure-JS class helper to avoid Tailwind cn dependency
 const cn = (...classes) => classes.filter(Boolean).join(" ");
+
+function GlowingCard({ item, index, isExpanded }) {
+  return (
+    <div 
+      className={cn(
+        "park_sec", 
+        `park_sec${index + 1}`,
+        isExpanded && "active"
+      )}
+      style={{
+        border: '1px solid rgb(51, 65, 85)',
+        background: 'rgb(30, 41, 59)',
+        boxShadow: 'inset 0 2px 4px 0 rgba(0,0,0,0.06)'
+      }}
+    >
+      <GlowingEffect
+        spread={60}
+        glow={true}
+        disabled={false}
+        proximity={96}
+        inactiveZone={0.01}
+        borderWidth={3}
+        movementDuration={1.4}
+      />
+      <div className="park_inside">
+        <span className="img" style={{ backgroundColor: item.color }}>
+          {item.icon}
+        </span>
+        <div className="content_sec">
+          <h2>{item.activity}</h2>
+          <span>{item.location}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export const StackedCards = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -36,24 +73,12 @@ export const StackedCards = () => {
     <div className="stacked-cards-container">
       <div className={cn("inner_container", isExpanded && "active-container")}>
         {activities.map((item, index) => (
-          <div 
-            key={item.id} 
-            className={cn(
-              "park_sec", 
-              `park_sec${index + 1}`,
-              isExpanded && "active"
-            )}
-          >
-            <div className="park_inside">
-              <span className="img" style={{ backgroundColor: item.color }}>
-                {item.icon}
-              </span>
-              <div className="content_sec">
-                <h2>{item.activity}</h2>
-                <span>{item.location}</span>
-              </div>
-            </div>
-          </div>
+          <GlowingCard 
+            key={item.id}
+            item={item}
+            index={index}
+            isExpanded={isExpanded}
+          />
         ))}
       </div>
       
@@ -67,6 +92,15 @@ export const StackedCards = () => {
       </div>
 
       <style>{`
+        .shader-container-exploded canvas {
+          width: 100% !important;
+          height: 100% !important;
+          display: block !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          border-radius: 19px !important;
+        }
         .stacked-cards-container {
           position: relative;
           width: 100%;
@@ -81,7 +115,7 @@ export const StackedCards = () => {
           position: relative;
           width: 100%;
           max-width: 980px;
-          height: 110px; /* Constrains the layout purely to the vertical mass of identical cards */
+          height: 110px;
           transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         
@@ -90,19 +124,17 @@ export const StackedCards = () => {
           left: 50%;
           width: 100%;
           max-width: 310px;
+          height: 78px;
           padding: 16px 20px;
-          border: 1px solid #1e293b;
           border-radius: 20px;
           box-sizing: border-box;
           display: flex;
           align-items: center;
-          background: #0f172a;
+          background: transparent;
           box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255,255,255,0.05);
-          /* Cartesian absolute transform tracking */
           transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease;
         }
         
-        /* COLLAPSED STATE - Immovably anchored onto 50% left Cartesian origins with symmetrical vertical overlaps */
         .park_sec1 {
           z-index: 3;
           transform: translate(-50%, 14px) scale(1);
@@ -116,7 +148,6 @@ export const StackedCards = () => {
           transform: translate(-50%, -14px) scale(0.9);
         }
         
-        /* EXPANDED STATE (Desktop) - Explodes outwardly mapped perfectly sideways off the same X array */
         .park_sec1.active {
           transform: translate(calc(-150% - 16px), 0) scale(1);
           z-index: 1; 
@@ -131,9 +162,11 @@ export const StackedCards = () => {
         }
         
         .park_inside {
+          position: relative;
           display: flex;
           align-items: center;
           width: 100%;
+          z-index: 2;
         }
         
         .img {
@@ -210,13 +243,10 @@ export const StackedCards = () => {
           top: 16px;
         }
         
-        /* Essential mobile layout overrides to preserve layout fluidity on narrow viewports */
         @media (max-width: 800px) {
-           /* Expand the physical array container down dynamically */
            .inner_container.active-container {
              height: 310px;
            }
-           /* Shift Cartesian layout perfectly downward sequentially instead of sideways */
            .park_sec1.active { transform: translate(-50%, 0) scale(1); }
            .park_sec2.active { transform: translate(-50%, 96px) scale(1) !important; }
            .park_sec3.active { transform: translate(-50%, 192px) scale(1); }

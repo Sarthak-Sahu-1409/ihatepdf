@@ -1,11 +1,5 @@
 import React from 'react';
 
-const EllipsisIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-    <path fillRule="evenodd" d="M10.5 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm0 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm0 6a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z" clipRule="evenodd" />
-  </svg>
-);
-
 export const CourseCard = ({ data }) => {
   const {
     colorClass,
@@ -44,13 +38,10 @@ export const CourseCard = ({ data }) => {
       onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
       onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
     >
-      {/* Header mimics original structural width but using the Icon & Ellipsis */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+      {/* Centered Icon Header */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
         <div style={{ color: accentColor }}>
-          {IconComp && <IconComp size={22} />}
-        </div>
-        <div style={{ color: '#64748b' }}>
-          <EllipsisIcon />
+          {IconComp && <IconComp size={28} />}
         </div>
       </div>
 

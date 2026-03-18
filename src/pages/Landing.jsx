@@ -11,12 +11,14 @@ import FutureNavbar from '../components/ui/future-navbar';
 import { GooeyText } from '../components/ui/gooey-text-morphing';
 import { StackedCards } from '../components/ui/stacked-activity-cards';
 import CourseCard from '../components/ui/course-design-cards';
+import { PremiumHowItWorks } from '../components/ui/premium-how-it-works';
 import { HiDocumentText } from 'react-icons/hi';
 import { HiMiniDocumentArrowUp, HiScissors } from 'react-icons/hi2';
 import { BsFileEarmarkZip } from 'react-icons/bs';
 import { BiSolidImageAlt } from 'react-icons/bi';
 import { RiPenNibFill } from 'react-icons/ri';
 import { IoWater } from 'react-icons/io5';
+import { BubbleText } from '../components/ui/bubble-text';
 
 export default function Landing() {
   /* ── Tool data with clay color variants and 3D Emojis ──── */
@@ -173,13 +175,11 @@ export default function Landing() {
             }}
           >
             Every{' '}
-            <GooeyText texts={["PDF Tool", "PDF Utility"]} morphTime={1.25} cooldownTime={2.5} />{' '}<br />
+            <GooeyText texts={["PDF Tool", "PDF Utility"]} morphTime={1.25} cooldownTime={2.5} />{' '}
             You'll Ever Need
           </h1>
 
           <p style={{ fontSize: '1.125rem', color: 'rgba(255,255,255,0.85)', maxWidth: '576px', margin: '0 auto', lineHeight: 1.7, marginBottom: '20px' }}>
-            Merge, split, compress, convert &amp; sign — all running{' '}
-            <span style={{ fontWeight: 600, color: 'white' }}>100% in your browser</span>.{' '}
             <span style={{ position: 'relative', display: 'inline-block', whiteSpace: 'nowrap' }}>
               No uploads. No risk. Just results.
               {/* Hand-drawn pencil underline — sits 2px below the text */}
@@ -233,7 +233,7 @@ export default function Landing() {
           `}</style>
 
           {/* Stat Pills — stacked-activity-cards */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '48px' }}>
             <StackedCards />
           </div>
         </div>
@@ -243,16 +243,47 @@ export default function Landing() {
       <section id="tools" style={{ paddingTop: '8px', paddingBottom: '32px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ maxWidth: '1152px', margin: '0 auto', paddingLeft: '24px', paddingRight: '24px' }}>
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-            <h2 style={{ fontSize: 'clamp(1.25rem, 3vw, 1.6rem)', fontWeight: 700, color: 'white', marginBottom: '4px', textShadow: '0 2px 10px rgba(0,0,0,0.15)' }}>
+            <h2 style={{ fontSize: 'clamp(2.5rem, 6vw, 4rem)', fontWeight: 900, color: '#818cf8', marginBottom: '1rem', textShadow: '0 2px 10px rgba(0,0,0,0.15)' }}>
               All Your PDF Tools
             </h2>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', margin: 0 }}>Click any tool to get started instantly.</p>
           </div>
 
-          <div style={{ position: 'relative', display: 'flex', height: '24rem', width: '100%', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', overflow: 'hidden', padding: '0 1rem' }}>
+          <style>{`
+            .radar-layout-container {
+              position: relative;
+              display: flex;
+              height: 24rem;
+              width: 100%;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 0.85rem;
+              overflow: hidden;
+              padding: 0 1rem;
+            }
+            .radar-row-wrap {
+              display: flex;
+              width: 100%;
+              align-items: center;
+              justify-content: space-between;
+            }
+            @media (max-width: 768px) {
+              .radar-layout-container {
+                height: auto;
+                gap: 1.5rem;
+                padding-bottom: 2rem;
+              }
+              .radar-row-wrap {
+                justify-content: center;
+                gap: 1.5rem;
+                flex-wrap: wrap;
+              }
+            }
+          `}</style>
+          <div className="radar-layout-container">
             {/* Row 1 — 3 tools */}
-            <div style={{ margin: '0 auto', width: '100%', maxWidth: '48rem' }}>
-              <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ margin: '0 auto', width: '100%', maxWidth: '40rem' }}>
+              <div className="radar-row-wrap">
                 <Link to={tools[0].path} style={{ textDecoration: 'none' }}>
                   <IconContainer text={tools[0].name} delay={0.2} icon={toolIcons[0]} />
                 </Link>
@@ -265,8 +296,8 @@ export default function Landing() {
               </div>
             </div>
             {/* Row 2 — 2 tools */}
-            <div style={{ margin: '0 auto', width: '100%', maxWidth: '28rem' }}>
-              <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ margin: '0 auto', width: '100%', maxWidth: '24rem' }}>
+              <div className="radar-row-wrap">
                 <Link to={tools[3].path} style={{ textDecoration: 'none' }}>
                   <IconContainer text={tools[3].name} delay={0.5} icon={toolIcons[3]} />
                 </Link>
@@ -276,8 +307,8 @@ export default function Landing() {
               </div>
             </div>
             {/* Row 3 — 2 tools */}
-            <div style={{ margin: '0 auto', width: '100%', maxWidth: '48rem' }}>
-              <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ margin: '0 auto', width: '100%', maxWidth: '40rem' }}>
+              <div className="radar-row-wrap">
                 <Link to={tools[5].path} style={{ textDecoration: 'none' }}>
                   <IconContainer text={tools[5].name} delay={0.6} icon={toolIcons[5]} />
                 </Link>
@@ -295,7 +326,7 @@ export default function Landing() {
 
       {/* ── Features + How It Works — Side by Side ── */}
       <section id="features" style={{ paddingTop: '12px', paddingBottom: '24px', paddingLeft: '24px', paddingRight: '24px', overflow: 'visible' }}>
-        <div style={{ maxWidth: '960px', margin: '0 auto', display: 'flex', gap: '24px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div style={{ maxWidth: '960px', margin: '0 auto', display: 'flex', gap: '24px', alignItems: 'center', flexWrap: 'wrap' }}>
 
           {/* LEFT: Why IHatePDF — Flat Cards */}
           <div style={{ flex: '1 1 480px', minWidth: 0 }}>
@@ -368,84 +399,9 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* RIGHT: Three Simple Steps — Vertical */}
-          <div style={{ flex: '1 1 300px' }}>
-            <div
-              className="clay-container"
-              style={{
-                padding: '20px 20px',
-                background: '#0f172a',
-              }}
-            >
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', textAlign: 'center', marginBottom: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
-                <span style={{
-                  display: 'inline-block',
-                  height: '1.2em',
-                  overflow: 'hidden',
-                  animation: 'wordWidth 4.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite',
-                  position: 'relative',
-                  textAlign: 'center',
-                  whiteSpace: 'nowrap'
-                }}>
-                  <span style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    animation: 'slideWords 4.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite'
-                  }}>
-                    <span style={{ height: '1.2em', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Three</span>
-                    <span style={{ height: '1.2em', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>3</span>
-                    <span style={{ height: '1.2em', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Three</span>
-                  </span>
-                </span>
-                <span>Simple Steps</span>
-              </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
-                {[
-                  { step: '1', title: 'Upload', desc: 'Drag & drop your files into the browser.' },
-                  { step: '2', title: 'Process', desc: 'Instant local processing — nothing uploaded.' },
-                  { step: '3', title: 'Download', desc: 'Get your finished file in seconds.' },
-                ].reduce((acc, s, i, arr) => {
-                  acc.push(
-                    <div key={`step-${i}`} style={{ textAlign: 'center', width: '100%' }}>
-                      <div className="clay-step-number" style={{ margin: '0 auto 8px', width: 48, height: 48, fontSize: '1.1rem' }}>
-                        {s.step}
-                      </div>
-                      <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white', marginBottom: '2px' }}>{s.title}</h3>
-                      <p style={{ color: '#94a3b8', fontSize: '0.72rem', lineHeight: 1.4, margin: 0 }}>{s.desc}</p>
-                    </div>
-                  );
-                  if (i < arr.length - 1) {
-                    acc.push(
-                      <div key={`arrow-${i}`} style={{ display: 'flex', justifyContent: 'center', padding: '6px 0' }}>
-                        <svg width="20" height="36" viewBox="0 0 20 36" fill="none" style={{ display: 'block' }}>
-                          <line x1="10" y1="2" x2="10" y2="24" stroke="#334155" strokeWidth="2.5" strokeLinecap="round"
-                            style={{ animation: 'arrowPulseDown 1.5s ease-in-out infinite' }} />
-                          <polyline points="4,20 10,32 16,20" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                            style={{ animation: 'arrowPulseDown 1.5s ease-in-out infinite' }} />
-                        </svg>
-                      </div>
-                    );
-                  }
-                  return acc;
-                }, [])}
-              </div>
-              <style>{`
-                @keyframes arrowPulseDown {
-                  0%, 100% { opacity: 0.5; transform: translateY(0); }
-                  50%       { opacity: 1;   transform: translateY(3px); }
-                }
-                @keyframes wordWidth {
-                  0%, 35% { width: 3.4em; }
-                  45%, 85% { width: 0.8em; }
-                  95%, 100% { width: 3.4em; }
-                }
-                @keyframes slideWords {
-                  0%, 35% { transform: translateY(0); }
-                  45%, 85% { transform: translateY(-33.333%); }
-                  95%, 100% { transform: translateY(-66.666%); }
-                }
-              `}</style>
-            </div>
+          {/* RIGHT: Three Simple Steps — Premium Glassmorphic Card */}
+          <div id="workflow" style={{ flex: '1 1 300px', display: 'flex', justifyContent: 'center' }}>
+            <PremiumHowItWorks />
           </div>
 
         </div>

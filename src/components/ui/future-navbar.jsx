@@ -285,11 +285,10 @@ export default function FutureNavbar() {
               ]}
             />
             <div style={{ display: 'flex', alignItems: 'center', marginTop: '-0.875rem' }}>
-              {/* Note: I'm converting the Search box to just a direct link to #tools as this app doesn't have docs/search yet */}
-              <a href="#tools" style={{ textDecoration: 'none' }}>
+              <a href="#workflow" style={{ textDecoration: 'none' }}>
                 <FutureButton shape="flat" style={{ padding: '0.45rem 2.25rem', fontSize: '0.75rem', fontWeight: 'normal', color: 'white' }}>
                   <div style={{ display: 'flex', gap: '2.5rem' }}>
-                    <span>Launch App</span>
+                    <span>Workflow</span>
                     <span>→</span>
                 </div>
                 </FutureButton>
