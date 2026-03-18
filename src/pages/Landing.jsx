@@ -8,6 +8,9 @@ import {
 } from 'lucide-react';
 import { Radar, IconContainer } from '../components/ui/radar-effect';
 import FutureNavbar from '../components/ui/future-navbar';
+import { GooeyText } from '../components/ui/gooey-text-morphing';
+import { StackedCards } from '../components/ui/stacked-activity-cards';
+import CourseCard from '../components/ui/course-design-cards';
 import { HiDocumentText } from 'react-icons/hi';
 import { HiMiniDocumentArrowUp, HiScissors } from 'react-icons/hi2';
 import { BsFileEarmarkZip } from 'react-icons/bs';
@@ -170,43 +173,7 @@ export default function Landing() {
             }}
           >
             Every{' '}
-            <span style={{ position: 'relative', display: 'inline-block', padding: '0 6px', zIndex: 1 }}>
-              {/* Orange pencil-shaded highlight */}
-              <svg
-                aria-hidden="true"
-                preserveAspectRatio="none"
-                viewBox="0 0 440 88"
-                style={{
-                  position: 'absolute',
-                  left: '-4%', top: '-12%',
-                  width: '108%', height: '124%',
-                  zIndex: -1,
-                  overflow: 'visible',
-                }}
-              >
-                <defs>
-                  <filter id="pencilShade" x="-6%" y="-30%" width="112%" height="160%">
-                    <feTurbulence type="fractalNoise" baseFrequency="0.02 0.08" numOctaves="3" seed="12" result="noise" />
-                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" xChannelSelector="R" yChannelSelector="G" />
-                  </filter>
-                </defs>
-                <g filter="url(#pencilShade)">
-                  {/* Base wash — solid enough to read as orange */}
-                  <path
-                    d="M 18 18 C 90 10, 220 8, 360 13 C 410 15, 428 30, 425 46 C 422 62, 405 76, 354 79 C 220 84, 88 81, 20 76 C -4 72, 10 28, 18 18 Z"
-                    fill="rgba(255,115,0,0.50)"
-                  />
-                  {/* Pencil strokes — vivid bright orange */}
-                  <path d="M 16 24 C 100 19, 210 22, 330 20 C 390 19, 418 24, 422 27" stroke="rgba(255,120,0,0.88)" strokeWidth="9" fill="none" strokeLinecap="round" />
-                  <path d="M 13 33 C 105 28, 215 32, 332 30 C 393 28, 420 33, 423 36" stroke="rgba(255,110,0,0.82)" strokeWidth="10" fill="none" strokeLinecap="round" />
-                  <path d="M 14 42 C 102 38, 213 41, 331 39 C 392 37, 421 42, 424 45" stroke="rgba(255,125,0,0.90)" strokeWidth="9"  fill="none" strokeLinecap="round" />
-                  <path d="M 15 51 C 103 47, 214 51, 332 49 C 393 47, 421 51, 424 54" stroke="rgba(255,115,0,0.84)" strokeWidth="10" fill="none" strokeLinecap="round" />
-                  <path d="M 16 60 C 102 57, 212 60, 330 58 C 391 56, 419 60, 422 63" stroke="rgba(255,120,0,0.78)" strokeWidth="8"  fill="none" strokeLinecap="round" />
-                  <path d="M 19 69 C 104 66, 212 68, 328 67 C 388 65, 416 68, 419 71" stroke="rgba(255,115,0,0.65)" strokeWidth="7"  fill="none" strokeLinecap="round" />
-                </g>
-              </svg>
-              <span style={{ position: 'relative', zIndex: 1 }}>PDF Tool</span>
-            </span>{' '}<br />
+            <GooeyText texts={["PDF Tool", "PDF Utility"]} morphTime={1.25} cooldownTime={2.5} />{' '}<br />
             You'll Ever Need
           </h1>
 
@@ -265,31 +232,9 @@ export default function Landing() {
             }
           `}</style>
 
-          {/* Stat Pills — clay-pill with colored left border */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px' }}>
-            {[
-              { emoji: '🔒', label: '100% Private', border: '#3B82F6' },
-              { emoji: '⚡', label: 'WASM Powered', border: '#F59E0B' },
-              { emoji: '🌐', label: 'Works Offline', border: '#10B981' },
-            ].map((pill) => (
-              <div
-                key={pill.label}
-                className="clay-pill"
-                style={{
-                  padding: '10px 20px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  color: 'white',
-                  borderLeft: `4px solid ${pill.border}`,
-                }}
-              >
-                <span>{pill.emoji}</span>
-                {pill.label}
-              </div>
-            ))}
+          {/* Stat Pills — stacked-activity-cards */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+            <StackedCards />
           </div>
         </div>
       </section>
@@ -404,33 +349,20 @@ export default function Landing() {
                 Fast, private, and completely free.
               </p>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px', height: '100%' }}>
               {features.map((f, i) => {
-                const IconComp = f.icon;
+                const colorClasses = ['green', 'red', 'blue', 'orange'];
+                
+                const cardData = {
+                  id: i + 1,
+                  colorClass: colorClasses[i],
+                  title: f.title,
+                  description: f.desc,
+                  icon: f.icon
+                };
+
                 return (
-                  <div
-                    key={i}
-                    style={{
-                      borderRadius: 14,
-                      overflow: 'hidden',
-                      background: f.lightBg,
-                      boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                    }}
-                  >
-                    {/* Colored top with icon */}
-                    <div style={{ background: f.gradient, padding: '32px 16px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
-                      <IconComp size={36} color="white" strokeWidth={1.5} />
-                      {/* Wavy divider */}
-                      <svg viewBox="0 0 400 35" preserveAspectRatio="none" style={{ position: 'absolute', bottom: -1, left: 0, width: '100%', height: 24 }}>
-                        <path d="M0 35 C100 0, 200 28, 300 8 C350 -2, 380 12, 400 4 L400 35 Z" fill={f.lightBg} />
-                      </svg>
-                    </div>
-                    {/* White bottom with text */}
-                    <div style={{ padding: '14px 14px 16px', textAlign: 'center' }}>
-                      <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', marginBottom: '3px' }}>{f.title}</h3>
-                      <p style={{ color: '#94a3b8', fontSize: '0.7rem', lineHeight: 1.45, margin: 0 }}>{f.desc}</p>
-                    </div>
-                  </div>
+                  <CourseCard key={cardData.id} data={cardData} />
                 );
               })}
             </div>
