@@ -74,7 +74,7 @@ export const StackedCards = () => {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 5px 0 20px 0;
+          padding: 5px 0 0px 0;
         }
         
         .inner_container {

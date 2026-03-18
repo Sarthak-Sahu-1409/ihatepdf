@@ -240,7 +240,7 @@ export default function Landing() {
       </section>
 
       {/* ── Tools — Radar Effect ────────────────── */}
-      <section id="tools" style={{ paddingTop: '32px', paddingBottom: '32px', position: 'relative', overflow: 'hidden' }}>
+      <section id="tools" style={{ paddingTop: '8px', paddingBottom: '32px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ maxWidth: '1152px', margin: '0 auto', paddingLeft: '24px', paddingRight: '24px' }}>
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
             <h2 style={{ fontSize: 'clamp(1.25rem, 3vw, 1.6rem)', fontWeight: 700, color: 'white', marginBottom: '4px', textShadow: '0 2px 10px rgba(0,0,0,0.15)' }}>
