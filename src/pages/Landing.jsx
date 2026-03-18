@@ -1,13 +1,19 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Lock,
   Zap,
-  ChevronLeft,
-  ChevronRight,
   WifiOff,
   UserX,
 } from 'lucide-react';
+import { Radar, IconContainer } from '../components/ui/radar-effect';
+import FutureNavbar from '../components/ui/future-navbar';
+import { HiDocumentText } from 'react-icons/hi';
+import { HiMiniDocumentArrowUp, HiScissors } from 'react-icons/hi2';
+import { BsFileEarmarkZip } from 'react-icons/bs';
+import { BiSolidImageAlt } from 'react-icons/bi';
+import { RiPenNibFill } from 'react-icons/ri';
+import { IoWater } from 'react-icons/io5';
 
 export default function Landing() {
   /* ── Tool data with clay color variants and 3D Emojis ──── */
@@ -90,39 +96,32 @@ export default function Landing() {
       desc: 'Your files never leave your device. Everything runs locally.',
       icon: Lock,
       gradient: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
-      lightBg: '#F0FDF4',
+      lightBg: '#0f172a',
     },
     {
       title: 'Lightning Fast',
       desc: 'Near-native speed powered by WebAssembly in your browser.',
       icon: Zap,
       gradient: 'linear-gradient(135deg, #F472B6 0%, #EC4899 100%)',
-      lightBg: '#FDF2F8',
+      lightBg: '#0f172a',
     },
     {
       title: 'No Sign-Up',
       desc: 'Zero accounts, zero tracking, zero hidden paywalls.',
       icon: UserX,
       gradient: 'linear-gradient(135deg, #818CF8 0%, #6366F1 100%)',
-      lightBg: '#EEF2FF',
+      lightBg: '#0f172a',
     },
     {
       title: 'Works Offline',
       desc: 'Install as a PWA and use it anywhere, even without Wi-Fi.',
       icon: WifiOff,
       gradient: 'linear-gradient(135deg, #FB923C 0%, #F97316 100%)',
-      lightBg: '#FFF7ED',
+      lightBg: '#0f172a',
     },
   ];
 
-  /* ── Carousel state ──────────────────────── */
-  // `current` = index of the CENTER (hero) card
-  const [current, setCurrent] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [cardsToShow, setCardsToShow] = useState(3);
   const [pencilKey, setPencilKey] = useState(0);
-  const [containerWidth, setContainerWidth] = useState(0);
-  const containerRef = useRef(null);
 
   /* Re-trigger pencil draw every 10 s */
   useEffect(() => {
@@ -130,78 +129,22 @@ export default function Landing() {
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    const updateCards = () => {
-      setCardsToShow(window.innerWidth < 768 ? 1 : 3);
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth);
-      }
-    };
-    updateCards();
-    window.addEventListener('resize', updateCards);
-    const t = setTimeout(updateCards, 100);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener('resize', updateCards);
-    };
-  }, []);
-
-  const lastIndex = tools.length - 1;
-
-  useEffect(() => {
-    if (paused) return;
-    const interval = setInterval(() => {
-      setCurrent((c) => (c >= lastIndex ? 0 : c + 1));
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [paused, lastIndex, current]);
-
-  const prev = useCallback(() => setCurrent((c) => (c <= 0 ? lastIndex : c - 1)), [lastIndex]);
-  const next = useCallback(() => setCurrent((c) => (c >= lastIndex ? 0 : c + 1)), [lastIndex]);
-
-  /* Card width + gap for transform calculation */
-  const cardWidth = 200; // Exact requested width
-  const gap = 24;
-  const step = cardWidth + gap;
-  const trackWidth = tools.length * step - gap;
-
-  // Calculate clamped offset to prevent empty spaces at the edges
-  let finalTranslate = 0;
-  if (containerWidth > 0) {
-    if (cardsToShow === 1 || trackWidth <= containerWidth) {
-      // Mobile or small track: center the current card safely
-      finalTranslate = (containerWidth / 2) - (current * step + cardWidth / 2);
-    } else {
-      // Desktop: bound the scrolling so we never see large empty space on the left or right
-      const maxScrollLeft = 0;
-      const maxScrollRight = containerWidth - trackWidth; // negative value
-      const desiredTranslate = (containerWidth / 2) - (current * step + cardWidth / 2);
-      
-      // Clamp between maxScrollRight (most negative) and maxScrollLeft (0)
-      finalTranslate = Math.max(maxScrollRight, Math.min(maxScrollLeft, desiredTranslate));
-    }
-  }
+  /* Icon mapping for each tool */
+  const toolIcons = [
+    <HiDocumentText className="h-8 w-8 text-slate-600" />,
+    <HiScissors className="h-8 w-8 text-slate-600" />,
+    <BsFileEarmarkZip className="h-8 w-8 text-slate-600" />,
+    <BiSolidImageAlt className="h-8 w-8 text-slate-600" />,
+    <HiMiniDocumentArrowUp className="h-8 w-8 text-slate-600" />,
+    <RiPenNibFill className="h-8 w-8 text-slate-600" />,
+    <IoWater className="h-8 w-8 text-slate-600" />,
+  ];
 
   return (
     <div style={{ minHeight: '100vh', overflowX: 'hidden', fontFamily: "'Inter', system-ui, sans-serif" }}>
 
       {/* ── Navbar ─────────────────────────────── */}
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50 }}>
-        <div className="clay-nav" style={{ padding: '12px 0' }}>
-          <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-              <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#1d4ed8', letterSpacing: '-0.02em' }}>&lt;/IHatePDF&gt;</span>
-            </Link>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }} className="hidden sm:flex">
-              <a href="#features" style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569', textDecoration: 'none', transition: 'color 0.2s' }}>Features</a>
-              <a href="#tools" className="clay-btn-primary" style={{ padding: '8px 20px', fontSize: '0.875rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
-                Tools
-              </a>
-            </div>
-          </div>
-        </div>
-      </nav>
-
+      <FutureNavbar />
       {/* ── Hero ───────────────────────────────── */}
       <section style={{ paddingTop: '80px', paddingBottom: '16px', paddingLeft: '24px', paddingRight: '24px' }}>
         <div style={{ maxWidth: '896px', margin: '0 auto', textAlign: 'center' }}>
@@ -339,7 +282,7 @@ export default function Landing() {
                   gap: '8px',
                   fontSize: '0.875rem',
                   fontWeight: 600,
-                  color: '#334155',
+                  color: 'white',
                   borderLeft: `4px solid ${pill.border}`,
                 }}
               >
@@ -351,106 +294,56 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Tools Carousel ─────────────────────── */}
-      <section id="tools" style={{ paddingTop: '12px', paddingBottom: '24px' }}>
+      {/* ── Tools — Radar Effect ────────────────── */}
+      <section id="tools" style={{ paddingTop: '32px', paddingBottom: '32px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ maxWidth: '1152px', margin: '0 auto', paddingLeft: '24px', paddingRight: '24px' }}>
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
             <h2 style={{ fontSize: 'clamp(1.25rem, 3vw, 1.6rem)', fontWeight: 700, color: 'white', marginBottom: '4px', textShadow: '0 2px 10px rgba(0,0,0,0.15)' }}>
               All Your PDF Tools
             </h2>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', margin: 0 }}>Click any tool to get started instantly.</p>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', margin: 0 }}>Click any tool to get started instantly.</p>
           </div>
 
-          {/* Carousel Wrapper */}
-          <div style={{ position: 'relative' }}>
-            {/* Arrows */}
-            <button
-              onClick={prev}
-              className="clay-arrow"
-              style={{ position: 'absolute', left: -8, top: '50%', marginTop: '-24px', zIndex: 10 }}
-              aria-label="Previous"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <button
-              onClick={next}
-              className="clay-arrow"
-              style={{ position: 'absolute', right: -8, top: '50%', marginTop: '-24px', zIndex: 10 }}
-              aria-label="Next"
-            >
-              <ChevronRight size={20} />
-            </button>
-
-            {/* Track — outer clip container */}
-            <div
-              ref={containerRef}
-              style={{ overflow: 'hidden', margin: '0 56px', padding: '20px 0' }}
-              onMouseEnter={() => setPaused(true)}
-              onMouseLeave={() => setPaused(false)}
-            >
-              <div
-                className="clay-carousel-track"
-                style={{
-                  transform: `translateX(${finalTranslate}px)`,
-                  width: trackWidth,
-                }}
-              >
-                {tools.map((tool, i) => {
-                  const isCenter = i === current;
-                  const isSide = !isCenter;
-
-                  return (
-                    <Link
-                      key={i}
-                      to={tool.path}
-                      className={`clay ${tool.clayClass}`}
-                      style={{
-                        flexShrink: 0,
-                        width: cardWidth,
-                        minHeight: 260,
-                        padding: '28px 24px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '14px',
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        textDecoration: 'none',
-                        zIndex: isCenter ? 10 : 1,
-                      }}
-                    >
-                      {/* 3D Emoji Icon — white clay chip floats on the card */}
-                      <div className="clay-icon" style={{ width: 72, height: 72, borderRadius: 22 }}>
-                        <img 
-                          src={tool.emoji3D} 
-                          alt={tool.name} 
-                          style={{ width: 44, height: 44, objectFit: 'contain' }}
-                        />
-                      </div>
-
-                      {/* Content */}
-                      <div>
-                        <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>{tool.name}</h3>
-                        <p style={{ color: '#475569', fontSize: '0.8rem', lineHeight: 1.55 }}>{tool.desc}</p>
-                      </div>
-                    </Link>
-                  );
-                })}
+          <div style={{ position: 'relative', display: 'flex', height: '24rem', width: '100%', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', overflow: 'hidden', padding: '0 1rem' }}>
+            {/* Row 1 — 3 tools */}
+            <div style={{ margin: '0 auto', width: '100%', maxWidth: '48rem' }}>
+              <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Link to={tools[0].path} style={{ textDecoration: 'none' }}>
+                  <IconContainer text={tools[0].name} delay={0.2} icon={toolIcons[0]} />
+                </Link>
+                <Link to={tools[1].path} style={{ textDecoration: 'none' }}>
+                  <IconContainer text={tools[1].name} delay={0.4} icon={toolIcons[1]} />
+                </Link>
+                <Link to={tools[2].path} style={{ textDecoration: 'none' }}>
+                  <IconContainer text={tools[2].name} delay={0.3} icon={toolIcons[2]} />
+                </Link>
+              </div>
+            </div>
+            {/* Row 2 — 2 tools */}
+            <div style={{ margin: '0 auto', width: '100%', maxWidth: '28rem' }}>
+              <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Link to={tools[3].path} style={{ textDecoration: 'none' }}>
+                  <IconContainer text={tools[3].name} delay={0.5} icon={toolIcons[3]} />
+                </Link>
+                <Link to={tools[4].path} style={{ textDecoration: 'none' }}>
+                  <IconContainer text={tools[4].name} delay={0.8} icon={toolIcons[4]} />
+                </Link>
+              </div>
+            </div>
+            {/* Row 3 — 2 tools */}
+            <div style={{ margin: '0 auto', width: '100%', maxWidth: '48rem' }}>
+              <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Link to={tools[5].path} style={{ textDecoration: 'none' }}>
+                  <IconContainer text={tools[5].name} delay={0.6} icon={toolIcons[5]} />
+                </Link>
+                <Link to={tools[6].path} style={{ textDecoration: 'none' }}>
+                  <IconContainer text={tools[6].name} delay={0.7} icon={toolIcons[6]} />
+                </Link>
               </div>
             </div>
 
-            {/* Dots */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '24px' }}>
-              {tools.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrent(i)}
-                  className={`clay-dot${i === current ? ' active' : ''}`}
-                  aria-label={`Go to slide ${i + 1}`}
-                />
-              ))}
-            </div>
+            <Radar style={{ position: 'absolute', bottom: '-3rem' }} />
+            <div style={{ position: 'absolute', bottom: 0, zIndex: 41, height: '1px', width: '100%', background: 'linear-gradient(to right, transparent, rgb(51,65,85), transparent)' }} />
           </div>
         </div>
       </section>
@@ -534,8 +427,8 @@ export default function Landing() {
                     </div>
                     {/* White bottom with text */}
                     <div style={{ padding: '14px 14px 16px', textAlign: 'center' }}>
-                      <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1e293b', marginBottom: '3px' }}>{f.title}</h3>
-                      <p style={{ color: '#64748b', fontSize: '0.7rem', lineHeight: 1.45, margin: 0 }}>{f.desc}</p>
+                      <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', marginBottom: '3px' }}>{f.title}</h3>
+                      <p style={{ color: '#94a3b8', fontSize: '0.7rem', lineHeight: 1.45, margin: 0 }}>{f.desc}</p>
                     </div>
                   </div>
                 );
@@ -549,10 +442,10 @@ export default function Landing() {
               className="clay-container"
               style={{
                 padding: '20px 20px',
-                background: 'linear-gradient(145deg, #EFF6FF 0%, #DBEAFE 100%)',
+                background: '#0f172a',
               }}
             >
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#1e293b', textAlign: 'center', marginBottom: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', textAlign: 'center', marginBottom: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
                 <span style={{
                   display: 'inline-block',
                   height: '1.2em',
@@ -585,17 +478,17 @@ export default function Landing() {
                       <div className="clay-step-number" style={{ margin: '0 auto 8px', width: 48, height: 48, fontSize: '1.1rem' }}>
                         {s.step}
                       </div>
-                      <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1e293b', marginBottom: '2px' }}>{s.title}</h3>
-                      <p style={{ color: '#475569', fontSize: '0.72rem', lineHeight: 1.4, margin: 0 }}>{s.desc}</p>
+                      <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white', marginBottom: '2px' }}>{s.title}</h3>
+                      <p style={{ color: '#94a3b8', fontSize: '0.72rem', lineHeight: 1.4, margin: 0 }}>{s.desc}</p>
                     </div>
                   );
                   if (i < arr.length - 1) {
                     acc.push(
                       <div key={`arrow-${i}`} style={{ display: 'flex', justifyContent: 'center', padding: '6px 0' }}>
                         <svg width="20" height="36" viewBox="0 0 20 36" fill="none" style={{ display: 'block' }}>
-                          <line x1="10" y1="2" x2="10" y2="24" stroke="#93C5FD" strokeWidth="2.5" strokeLinecap="round"
+                          <line x1="10" y1="2" x2="10" y2="24" stroke="#334155" strokeWidth="2.5" strokeLinecap="round"
                             style={{ animation: 'arrowPulseDown 1.5s ease-in-out infinite' }} />
-                          <polyline points="4,20 10,32 16,20" fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                          <polyline points="4,20 10,32 16,20" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                             style={{ animation: 'arrowPulseDown 1.5s ease-in-out infinite' }} />
                         </svg>
                       </div>
@@ -629,7 +522,7 @@ export default function Landing() {
       {/* ── Footer ─────────────────────────────── */}
       <footer>
         <div className="clay-footer" style={{ padding: '16px 32px', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0 }}>© {new Date().getFullYear()} IHatePDF. Built with 💙 by Sarthak</p>
+          <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: 0 }}>© {new Date().getFullYear()} IHatePDF. Built with 💙 by Sarthak</p>
         </div>
       </footer>
     </div>

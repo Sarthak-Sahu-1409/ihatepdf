@@ -6,9 +6,9 @@
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color-scheme: light;
-  color: #1e3a5f;
-  background-color: #e8f4fd;
+  color-scheme: dark;
+  color: #f8fafc;
+  background-color: #020617;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -22,8 +22,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   overflow-x: hidden;
-  background:
-    radial-gradient(ellipse at top, #38bdf8 0%, #077bba 40%, #2052d1 100%);
+  background: radial-gradient(ellipse at top, #1e293b 0%, #0f172a 40%, #020617 100%);
   background-attachment: fixed;
 }
 
@@ -65,7 +64,7 @@ body {
   /* THE CLAY FORMULA — aggressive shadows for real 3D depth */
   .clay {
     border-radius: 32px;
-    background: #ffffff;
+    background: #0f172a;
     border: none;
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
                 box-shadow 0.3s ease;
@@ -75,123 +74,110 @@ body {
   /* Feature cards — smooth lift on hover */
   .clay-feature {
     border-radius: 32px;
-    background: #ffffff;
+    background: #0f172a;
     border: none;
     box-shadow:
-      0 8px 0px rgba(60, 90, 200, 0.35),
-      0 24px 80px rgba(60, 100, 220, 0.4),
-      inset 0 -12px 28px rgba(70, 110, 230, 0.32),
-      inset 0 12px 28px rgba(255, 255, 255, 1);
+      0 8px 0px rgba(0, 0, 0, 0.6),
+      0 24px 80px rgba(0, 0, 0, 0.8),
+      inset 0 -12px 28px rgba(0, 0, 0, 0.5),
+      inset 0 12px 28px rgba(255, 255, 255, 0.05);
     transition: transform 0.4s cubic-bezier(0.34, 1.4, 0.64, 1),
                 box-shadow 0.4s ease;
   }
   .clay-feature:hover {
     transform: translateY(-4px) scale(1.01);
     box-shadow:
-      0 4px 0px rgba(60, 90, 200, 0.25),
-      0 14px 40px rgba(60, 100, 220, 0.35),
-      inset 0 -10px 24px rgba(70, 110, 230, 0.28),
-      inset 0 14px 32px rgba(255, 255, 255, 1);
+      0 4px 0px rgba(0, 0, 0, 0.5),
+      0 14px 40px rgba(0, 0, 0, 0.7),
+      inset 0 -10px 24px rgba(0, 0, 0, 0.4),
+      inset 0 14px 32px rgba(255, 255, 255, 0.1);
   }
 
   /* ── 2D Flat Color Variants ── */
   .clay-blue {
-    background: #ABCFFE; /* 10% lighter */
-    border: 3px solid #3B82F6;
-    box-shadow: 0 6px 0px #3B82F6;
+    background: #1e3a8a;
+    border: 2px solid #3B82F6;
+    box-shadow: 0 6px 0px #1e40af;
   }
-  .clay-blue:hover {
-    transform: scale(1.02);
-  }
+  .clay-blue:hover { transform: scale(1.02); }
 
   .clay-purple {
-    background: #CB9DFE; /* 10% lighter */
-    border: 3px solid #9333EA;
-    box-shadow: 0 6px 0px #9333EA;
+    background: #4c1d95;
+    border: 2px solid #9333EA;
+    box-shadow: 0 6px 0px #5b21b6;
   }
-  .clay-purple:hover {
-    transform: scale(1.02);
-  }
+  .clay-purple:hover { transform: scale(1.02); }
 
   .clay-green {
-    background: #6BE696; /* 10% lighter */
-    border: 3px solid #22C55E;
-    box-shadow: 0 6px 0px #22C55E;
+    background: #14532d;
+    border: 2px solid #22C55E;
+    box-shadow: 0 6px 0px #166534;
   }
-  .clay-green:hover {
-    transform: scale(1.02);
-  }
+  .clay-green:hover { transform: scale(1.02); }
 
   .clay-peach {
-    background: #FA8A8A; /* 10% lighter */
-    border: 3px solid #EF4444;
-    box-shadow: 0 6px 0px #EF4444;
+    background: #7f1d1d;
+    border: 2px solid #EF4444;
+    box-shadow: 0 6px 0px #991b1b;
   }
-  .clay-peach:hover {
-    transform: scale(1.02);
-  }
+  .clay-peach:hover { transform: scale(1.02); }
 
   .clay-pink {
-    background: #F68ECA; /* 10% lighter */
-    border: 3px solid #EC4899;
-    box-shadow: 0 6px 0px #EC4899;
+    background: #831843;
+    border: 2px solid #EC4899;
+    box-shadow: 0 6px 0px #9d174d;
   }
-  .clay-pink:hover {
-    transform: scale(1.02);
-  }
+  .clay-pink:hover { transform: scale(1.02); }
 
   .clay-yellow {
-    background: #FBD62E; /* 10% lighter */
-    border: 3px solid #EAB308;
-    box-shadow: 0 6px 0px #EAB308;
+    background: #713f12;
+    border: 2px solid #EAB308;
+    box-shadow: 0 6px 0px #854d0e;
   }
-  .clay-yellow:hover {
-    transform: scale(1.02);
-  }
+  .clay-yellow:hover { transform: scale(1.02); }
 
   .clay-teal {
-    background: #A5F3FC; /* 10% lighter */
-    border: 3px solid #06B6D4;
-    box-shadow: 0 6px 0px #0E7490;
+    background: #164e63;
+    border: 2px solid #06B6D4;
+    box-shadow: 0 6px 0px #0e7490;
   }
-  .clay-teal:hover {
-    transform: scale(1.02);
-  }
+  .clay-teal:hover { transform: scale(1.02); }
 
   /* ── Navbar ─────────────────────────────── */
   .clay-nav {
-    background: rgba(255, 255, 255, 1);
+    background: rgba(15, 23, 42, 0.85); /* slate-900 */
+    backdrop-filter: blur(12px);
     border-radius: 0;
-    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     box-shadow:
-      0 6px 0px rgba(60, 90, 200, 0.3),
-      0 16px 50px rgba(60, 100, 220, 0.35),
-      inset 0 -8px 20px rgba(100, 140, 230, 0.25),
-      inset 0 8px 20px rgba(255, 255, 255, 1);
+      0 6px 0px rgba(0, 0, 0, 0.3),
+      0 16px 50px rgba(0, 0, 0, 0.5),
+      inset 0 -8px 20px rgba(0, 0, 0, 0.4),
+      inset 0 8px 20px rgba(255, 255, 255, 0.05);
   }
 
   /* ── Container — Three Simple Steps ────── */
   .clay-container {
-    background: #EFF6FF;
+    background: #0f172a;
     border-radius: 40px;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.05);
     box-shadow:
-      0 12px 0px rgba(29, 78, 216, 0.3),
-      0 32px 90px rgba(60, 100, 220, 0.35),
-      inset 0 -14px 32px rgba(37, 99, 235, 0.25),
-      inset 0 14px 32px rgba(255, 255, 255, 1);
+      0 12px 0px rgba(0, 0, 0, 0.4),
+      0 32px 90px rgba(0, 0, 0, 0.6),
+      inset 0 -14px 32px rgba(0, 0, 0, 0.5),
+      inset 0 14px 32px rgba(255, 255, 255, 0.05);
   }
 
   /* ── Footer ─────────────────────────────── */
   .clay-footer {
-    background: rgba(239, 246, 255, 1);
+    background: #020617;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 0;
-    border: none;
     box-shadow:
-      0 -6px 0px rgba(29, 78, 216, 0.25),
-      0 -20px 50px rgba(60, 100, 220, 0.2),
-      inset 0 8px 20px rgba(255, 255, 255, 0.9),
-      inset 0 -8px 20px rgba(100, 140, 230, 0.2);
+      0 -6px 0px rgba(0, 0, 0, 0.4),
+      0 -20px 50px rgba(0, 0, 0, 0.6),
+      inset 0 8px 20px rgba(255, 255, 255, 0.02),
+      inset 0 -8px 20px rgba(0, 0, 0, 0.5);
   }
 
   /* ── Primary CTA Button ─────────────────── */
@@ -246,14 +232,14 @@ body {
 
   /* ── Stat Pills ─────────────────────────── */
   .clay-pill {
-    background: rgba(255, 255, 255, 0.92);
+    background: #0f172a;
     border-radius: 999px;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.05);
     box-shadow:
-      0 5px 0px rgba(60, 90, 200, 0.25),
-      0 14px 35px rgba(60, 100, 220, 0.3),
-      inset 0 -5px 12px rgba(100, 130, 220, 0.2),
-      inset 0 5px 12px rgba(255, 255, 255, 1);
+      0 5px 0px rgba(0, 0, 0, 0.4),
+      0 14px 35px rgba(0, 0, 0, 0.5),
+      inset 0 -5px 12px rgba(0, 0, 0, 0.5),
+      inset 0 5px 12px rgba(255, 255, 255, 0.05);
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   .clay-pill:hover {
@@ -268,12 +254,12 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.1);
     box-shadow:
-      0 6px 0px rgba(0, 0, 0, 0.22),
-      0 14px 32px rgba(0, 0, 0, 0.18),
-      inset 0 -6px 14px rgba(0, 0, 0, 0.18),
-      inset 0 6px 14px rgba(255, 255, 255, 1);
+      0 6px 0px rgba(0, 0, 0, 0.4),
+      0 14px 32px rgba(0, 0, 0, 0.5),
+      inset 0 -6px 14px rgba(0, 0, 0, 0.3),
+      inset 0 6px 14px rgba(255, 255, 255, 0.2);
   }
 
   /* ── Carousel ───────────────────────────── */
@@ -317,14 +303,14 @@ body {
     justify-content: center;
     font-size: 1.5rem;
     font-weight: 900;
-    color: #1E40AF;
-    background: #BFDBFE;
-    border: none;
+    color: #e2e8f0;
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow:
-      0 6px 0px rgba(29, 78, 216, 0.4),
-      0 16px 40px rgba(29, 100, 230, 0.35),
-      inset 0 -8px 18px rgba(37, 99, 235, 0.35),
-      inset 0 8px 18px rgba(255, 255, 255, 0.95);
+      0 6px 0px rgba(0, 0, 0, 0.4),
+      0 16px 40px rgba(0, 0, 0, 0.5),
+      inset 0 -8px 18px rgba(0, 0, 0, 0.4),
+      inset 0 8px 18px rgba(255, 255, 255, 0.05);
   }
 
   /* ── Arrow Buttons ──────────────────────── */
