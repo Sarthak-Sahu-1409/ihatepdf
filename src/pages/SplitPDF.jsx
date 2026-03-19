@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Upload, Download, ArrowLeft, Plus, Trash2, Scissors, X, Loader2 } from 'lucide-react';
+import { UploadCard } from '../components/ui/upload-ui';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 /* ─── helpers ─────────────────────────────────────────── */
@@ -399,46 +400,14 @@ export default function SplitPDF() {
             UPLOAD ZONE (no file loaded)
             ════════════════════════════════════════════════════ */}
         {!pdfFile && !isSuccess && (
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={handleDrop}
-            style={{
-              borderRadius: 32,
-              minHeight: 260,
-              background: isDragOver
-                ? 'linear-gradient(160deg, #C4B5FD 0%, #A78BFA 100%)'
-                : 'linear-gradient(160deg, #EDE9FE 0%, #DDD6FE 100%)',
-              boxShadow: isDragOver ? S.card : S.out,
-              border: isDragOver ? '3px dashed #7C3AED' : '3px dashed transparent',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              gap: 14, padding: '48px 24px', cursor: 'pointer',
-              transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
-              transform: isDragOver ? 'scale(1.02) translateY(-4px)' : 'scale(1)',
-              marginBottom: 24,
-            }}
-          >
-            <div style={{
-              width: 88, height: 88, borderRadius: 24, background: 'rgba(255,255,255,0.95)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: S.sm, marginBottom: 4,
-            }}>
-              <Upload size={38} color="#7C3AED" strokeWidth={2.5} />
-            </div>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#3B0764', letterSpacing: '-0.01em' }}>
-              Drop your PDF here
-            </h3>
-            <p style={{ color: '#6D28D9', fontSize: '0.9rem', fontWeight: 500 }}>
-              or click anywhere in this box to browse
-            </p>
-            <div style={{
-              padding: '6px 18px', borderRadius: 999,
-              background: 'rgba(255,255,255,0.7)', fontSize: '0.78rem', fontWeight: 600, color: '#7C3AED',
-              boxShadow: 'inset 0 -2px 6px rgba(124,58,237,0.1), inset 0 2px 6px rgba(255,255,255,0.8)',
-            }}>
-              Single PDF file only
-            </div>
+          <div onDragOver={e => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} style={{ marginBottom: 20 }}>
+            <UploadCard
+              status="idle"
+              title={isDragOver ? "Drop your PDF here!" : "Drop your PDF to split"}
+              description="or click to browse • Single PDF file"
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDrop}
+            />
             <input ref={fileInputRef} type="file" accept=".pdf" hidden onChange={e => { if (e.target.files[0]) loadPdf(e.target.files[0]); e.target.value = ''; }} />
           </div>
         )}

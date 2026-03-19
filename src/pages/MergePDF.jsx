@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Upload, Trash2, GripVertical, Plus, Download, Loader2, X, ArrowLeft,
 } from 'lucide-react';
+import { UploadCard } from '../components/ui/upload-ui';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 /* ────────────────────────────────────────────────────────────────
@@ -438,82 +439,14 @@ export default function MergePDF() {
 
         {/* ── ZONE 2 — Upload Drop Zone ───────────────────── */}
         {!isSuccess && (
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragOver(true);
-            }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={handleDropZoneDrop}
-            style={{
-              background: isDragOver
-                ? 'linear-gradient(160deg, #93C5FD 0%, #60A5FA 100%)'
-                : 'linear-gradient(160deg, #DBEAFE 0%, #BFDBFE 100%)',
-              borderRadius: 32,
-              minHeight: 240,
-              boxShadow: isDragOver
-                ? '0 10px 0px rgba(29,78,216,0.55), 0 30px 90px rgba(29,100,230,0.5), inset 0 -14px 32px rgba(37,99,235,0.4), inset 0 14px 32px rgba(255,255,255,0.95)'
-                : '0 8px 0px rgba(29,78,216,0.45), 0 24px 70px rgba(29,100,230,0.38), inset 0 -12px 28px rgba(37,99,235,0.32), inset 0 12px 28px rgba(255,255,255,0.92)',
-              border: isDragOver ? '3px dashed #2563EB' : '3px dashed transparent',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 14,
-              padding: '48px 24px',
-              cursor: 'pointer',
-              transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
-              transform: isDragOver ? 'scale(1.02) translateY(-4px)' : 'scale(1)',
-              marginBottom: 32,
-              position: 'relative',
-            }}
-          >
-            {/* upload icon box — big and dramatic */}
-            <div
-              style={{
-                width: 88,
-                height: 88,
-                borderRadius: 24,
-                background: 'rgba(255,255,255,0.95)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow:
-                  '0 8px 0px rgba(29,78,216,0.35), 0 20px 50px rgba(29,100,230,0.35), inset 0 -8px 20px rgba(37,99,235,0.22), inset 0 8px 20px rgba(255,255,255,1)',
-                marginBottom: 4,
-              }}
-            >
-              <Upload size={38} color="#1D4ED8" strokeWidth={2.5} />
-            </div>
-            <h3
-              style={{
-                fontSize: '1.3rem',
-                fontWeight: 800,
-                color: '#1e3a5f',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              Drop PDFs here
-            </h3>
-            <p style={{ color: '#475569', fontSize: '0.9rem', fontWeight: 500 }}>
-              or click anywhere in this box to browse files
-            </p>
-            {/* sub-badge */}
-            <div
-              style={{
-                padding: '6px 18px',
-                borderRadius: 999,
-                background: 'rgba(255,255,255,0.7)',
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                color: '#3B82F6',
-                boxShadow:
-                  'inset 0 -2px 6px rgba(59,130,246,0.1), inset 0 2px 6px rgba(255,255,255,0.8)',
-              }}
-            >
-              PDF files only • Multiple files supported
-            </div>
+          <div onDragOver={e => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} style={{ marginBottom: 20 }}>
+            <UploadCard
+              status="idle"
+              title={isDragOver ? "Drop PDFs here!" : "Drop PDFs to merge"}
+              description="or click to browse • Multiple files supported"
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDropZoneDrop}
+            />
             <input
               ref={fileInputRef}
               type="file"

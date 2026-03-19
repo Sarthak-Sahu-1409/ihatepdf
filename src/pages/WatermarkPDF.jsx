@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Upload, X, Download, Loader2 } from 'lucide-react';
+import { UploadCard } from '../components/ui/upload-ui';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import formatFileSize from '../utils/formatFileSize';
 
@@ -718,61 +719,28 @@ export default function WatermarkPDF() {
         {/* ─── SECTION 2: UPLOAD ZONE ─────────────────────── */}
         {!isSuccess && (
           <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf"
-              style={{ display: 'none' }}
-              onChange={(e) => { const f = e.target.files[0]; if (f) handleFileLoad(f); }}
-            />
-
-            <div
-              onClick={() => !pdfFile && fileInputRef.current?.click()}
-              onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-              onDragLeave={() => setIsDragOver(false)}
-              onDrop={handleDrop}
-              style={{
-                borderRadius: '28px', padding: '24px 28px', minHeight: '140px',
-                background: isDragOver ? '#A5F3FC' : '#CFFAFE',
-                boxShadow: isDragOver
-                  ? '0 8px 0px rgba(14,116,144,0.55), 0 28px 70px rgba(6,182,212,0.5), inset 0 -12px 26px rgba(6,182,212,0.38), inset 0 12px 26px rgba(255,255,255,0.95)'
-                  : '0 7px 0px rgba(14,116,144,0.4), 0 20px 55px rgba(6,182,212,0.32), inset 0 -10px 22px rgba(6,182,212,0.26), inset 0 10px 22px rgba(255,255,255,0.9)',
-                border: isDragOver ? '2px dashed #0E7490' : '2px dashed rgba(34,211,238,0.7)',
-                cursor: pdfFile ? 'default' : 'pointer',
-                transition: 'all 0.25s cubic-bezier(0.34,1.2,0.64,1)',
-                transform: isDragOver ? 'scale(1.015)' : 'scale(1)',
-                display: 'flex', alignItems: 'center', gap: '18px',
-                marginBottom: '20px',
-              }}
-            >
-              <div style={{
-                width: '52px', height: '52px', borderRadius: '14px', flexShrink: 0,
-                background: 'rgba(255,255,255,0.85)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 0px rgba(14,116,144,0.22), 0 10px 26px rgba(6,182,212,0.2), inset 0 -4px 10px rgba(6,182,212,0.18), inset 0 4px 10px rgba(255,255,255,0.98)',
-              }}>
-                <Upload size={22} color="#0E7490" />
+            {!pdfFile && (
+              <div onDragOver={e => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} style={{ marginBottom: 20 }}>
+                <UploadCard
+                  status="idle"
+                  title={isDragOver ? "Drop your PDF here!" : "Drop your PDF to watermark"}
+                  description="or click to browse • Single PDF file"
+                  onClick={() => fileInputRef.current?.click()}
+                  onDrop={handleDrop}
+                />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  style={{ display: 'none' }}
+                  onChange={(e) => { 
+                    const f = e.target.files[0]; 
+                    if (f) handleFileLoad(f); 
+                    e.target.value = '';
+                  }}
+                />
               </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontWeight: 800, fontSize: '1.05rem', color: '#083344', margin: '0 0 3px' }}>
-                  {isDragOver ? '📂 Drop your PDF here!' : 'Drop your PDF to watermark'}
-                </p>
-                <p style={{ color: '#0E7490', fontSize: '0.82rem', margin: 0, fontWeight: 500 }}>
-                  or click to browse • Single PDF file
-                </p>
-              </div>
-              {!pdfFile && (
-                <div style={{
-                  padding: '7px 14px', borderRadius: '12px', flexShrink: 0,
-                  background: 'rgba(255,255,255,0.65)', color: '#0E7490',
-                  fontWeight: 700, fontSize: '0.78rem',
-                  boxShadow: 'inset 0 2px 6px rgba(255,255,255,0.8)',
-                  display: 'flex', alignItems: 'center', gap: '4px',
-                }}>
-                  <Upload size={13} /> Select File
-                </div>
-              )}
-            </div>
+            )}
 
             {/* ─── SECTION 3: FILE INFO CARD ─────────────── */}
             {pdfFile && (

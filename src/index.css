@@ -361,4 +361,36 @@ body {
     }
   }
 
+  /* ── Mobile Overrides ───────────────────── */
+  @media (max-width: 768px) {
+    .mobile-stack { display: flex !important; flex-direction: column !important; }
+    .mobile-grid-1 { grid-template-columns: 1fr !important; }
+    .mobile-w-full { width: 100% !important; flex: 1 1 100% !important; max-width: 100% !important; }
+    .mobile-gap-16 { gap: 16px !important; }
+    .mobile-px-16 { padding-left: 16px !important; padding-right: 16px !important; }
+    .mobile-text-center { text-align: center !important; }
+    .mobile-hidden { display: none !important; }
+    .mobile-show-flex { display: flex !important; }
+    .mobile-text-3xl { font-size: 1.875rem !important; }
+    .mobile-text-2xl { font-size: 1.5rem !important; }
+    .mobile-p-16 { padding: 16px !important; }
+    .mobile-mt-16 { margin-top: 16px !important; }
+    .mobile-mb-16 { margin-bottom: 16px !important; }
+    
+    /* Specific Tool overrides to gracefully collapse grids */
+    .tool-workspace-grid { 
+      grid-template-columns: 1fr !important; 
+    }
+    
+    .radar-layout-container {
+      height: auto !important;
+      padding-bottom: 24px !important;
+    }
+    
+    .mobile-radar-container {
+      top: 50% !important;
+      bottom: auto !important;
+      transform: translateY(-50%) scale(0.55) !important;
+    }
+  }
 } /* end @layer components */

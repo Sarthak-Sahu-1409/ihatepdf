@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Upload, X, Download, Loader2 } from 'lucide-react';
+import { Download, Upload, X, Loader2, Maximize2, Trash2, SlidersHorizontal, Settings } from 'lucide-react';
+import { UploadCard } from '../components/ui/upload-ui';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import formatFileSize from '../utils/formatFileSize';
 
@@ -304,59 +305,23 @@ export default function PDFtoJPG() {
           </div>
         )}
 
-        {/* ─── SECTION 2: UPLOAD ZONE ───────────────────────── */}
+        {/* ─── SECTION 2: UPLOAD ZONE ──────────────────────── */}
         {!pdfFile && !isSuccess && (
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={handleDrop}
-            style={{
-              borderRadius: 28, padding: '24px 28px', minHeight: 140,
-              background: isDragOver ? '#FDBA74' : '#FED7AA',
-              boxShadow: isDragOver
-                ? '0 8px 0px rgba(194,65,12,0.55), 0 28px 70px rgba(234,88,12,0.5), inset 0 -12px 26px rgba(234,88,12,0.38), inset 0 12px 26px rgba(255,255,255,0.95)'
-                : '0 7px 0px rgba(194,65,12,0.4), 0 20px 55px rgba(234,88,12,0.32), inset 0 -10px 22px rgba(234,88,12,0.26), inset 0 10px 22px rgba(255,255,255,0.9)',
-              border: isDragOver ? '2px dashed #EA580C' : '2px dashed rgba(251,146,60,0.7)',
-              cursor: 'pointer',
-              transition: 'all 0.25s cubic-bezier(0.34,1.2,0.64,1)',
-              transform: isDragOver ? 'scale(1.015)' : 'scale(1)',
-              display: 'flex', alignItems: 'center', gap: 18,
-              marginBottom: 20,
-            }}
-          >
-            <div style={{
-              width: 52, height: 52, borderRadius: 14, flexShrink: 0,
-              background: 'rgba(255,255,255,0.85)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 0px rgba(194,65,12,0.22), 0 10px 26px rgba(234,88,12,0.2), inset 0 -4px 10px rgba(234,88,12,0.18), inset 0 4px 10px rgba(255,255,255,0.98)',
-            }}>
-              <Upload size={22} color="#C2410C" />
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontWeight: 800, fontSize: '1.05rem', color: '#431407', margin: '0 0 3px' }}>
-                {isDragOver ? '📂 Drop your PDF here!' : 'Drop your PDF to convert to images'}
-              </p>
-              <p style={{ color: '#EA580C', fontSize: '0.82rem', margin: 0, fontWeight: 500 }}>
-                or click to browse • Single PDF • Each page → 1 JPG
-              </p>
-            </div>
-            <div style={{
-              padding: '7px 14px', borderRadius: 12, flexShrink: 0,
-              background: 'rgba(255,255,255,0.65)', color: '#C2410C',
-              fontWeight: 700, fontSize: '0.78rem',
-              boxShadow: 'inset 0 2px 6px rgba(255,255,255,0.8)',
-              display: 'flex', alignItems: 'center', gap: 4,
-            }}>
-              <Upload size={13} /> Select File
-            </div>
+          <div onDragOver={e => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} style={{ marginBottom: 20 }}>
+            <UploadCard
+              status="idle"
+              title={isDragOver ? "Drop your PDF here!" : "Drop your PDF to convert to images"}
+              description="or click to browse • Single PDF file"
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDrop}
+            />
             <input ref={fileInputRef} type="file" accept=".pdf" hidden onChange={e => { if (e.target.files[0]) handleFileLoad(e.target.files[0]); e.target.value = ''; }} />
           </div>
         )}
 
-        {/* ─── SECTION 3: SETTINGS + LIVE PREVIEW ──────────── */}
+        {/* ─── SECTION 3: SETTINGS        {/* ACTIVE WORKSPACE */}
         {pdfFile && !isSuccess && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16, alignItems: 'start' }}>
+          <div className="tool-workspace-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16, alignItems: 'start' }}>
 
             {/* LEFT: Settings */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -576,15 +541,7 @@ export default function PDFtoJPG() {
 
         {/* ─── SECTION 4: STICKY ACTION BAR ────────────────── */}
         {pdfFile && !isSuccess && (
-          <div style={{
-            position: 'sticky', bottom: 20, zIndex: 40,
-            borderRadius: 24, padding: '16px 20px',
-            background: 'linear-gradient(135deg, #FEF3C7, #FED7AA)',
-            boxShadow: '0 8px 0px rgba(194,65,12,0.3), 0 24px 65px rgba(234,88,12,0.32), inset 0 -10px 24px rgba(234,88,12,0.2), inset 0 10px 24px rgba(255,255,255,0.95)',
-            display: 'flex', alignItems: 'center', gap: 12,
-            marginTop: 32, marginBottom: 40, overflow: 'visible',
-            flexWrap: 'wrap', justifyContent: 'space-between',
-          }}>
+          <div className="mobile-stack mobile-p-16" style={{ position: 'sticky', bottom: '20px', zIndex: 40, borderRadius: 24, padding: '20px 24px', background: 'linear-gradient(135deg, rgba(254, 202, 202, 0.95), rgba(252, 165, 165, 0.95))', backdropFilter: 'blur(10px)', boxShadow: '0 8px 0px rgba(153, 27, 27, 0.3), 0 24px 65px rgba(220, 38, 38, 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <div style={statPill}>🖼️ {getPageCountToConvert()} images</div>
               <div style={statPill}>📦 ~{estimatedOutputSize()}</div>

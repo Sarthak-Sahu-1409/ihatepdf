@@ -155,7 +155,7 @@ export default function Landing() {
         <div style={{ maxWidth: '896px', margin: '0 auto', textAlign: 'center' }}>
           <h1
             style={{
-              fontSize: 'clamp(3rem, 7vw, 4.5rem)',
+              fontSize: 'clamp(2.2rem, 8vw, 4.5rem)',
               fontWeight: 900,
               color: 'white',
               lineHeight: 1.08,
@@ -318,7 +318,9 @@ export default function Landing() {
               </div>
             </div>
 
-            <Radar style={{ position: 'absolute', bottom: '-3rem' }} />
+            <div className="mobile-radar-container" style={{ position: 'absolute', bottom: '-3rem', zIndex: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', left: 0 }}>
+              <Radar />
+            </div>
             <div style={{ position: 'absolute', bottom: 0, zIndex: 41, height: '1px', width: '100%', background: 'linear-gradient(to right, transparent, rgb(51,65,85), transparent)' }} />
           </div>
         </div>
@@ -329,7 +331,7 @@ export default function Landing() {
         <div style={{ maxWidth: '960px', margin: '0 auto', display: 'flex', gap: '24px', alignItems: 'center', flexWrap: 'wrap' }}>
 
           {/* LEFT: Why IHatePDF — Flat Cards */}
-          <div style={{ flex: '1 1 480px', minWidth: 0 }}>
+          <div className="mobile-w-full" style={{ flex: '1 1 480px', minWidth: 0 }}>
             <div style={{ textAlign: 'center', marginBottom: '10px' }}>
               <h2 style={{ fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', fontWeight: 700, color: 'white', marginBottom: '4px', textShadow: '0 2px 10px rgba(0,0,0,0.15)', position: 'relative', display: 'inline-block' }}>
                 Why IHatePDF?
@@ -380,7 +382,7 @@ export default function Landing() {
                 Fast, private, and completely free.
               </p>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px', height: '100%' }}>
+            <div className="mobile-grid-1 mobile-gap-16" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px', height: '100%' }}>
               {features.map((f, i) => {
                 const colorClasses = ['green', 'red', 'blue', 'orange'];
                 
@@ -400,7 +402,7 @@ export default function Landing() {
           </div>
 
           {/* RIGHT: Three Simple Steps — Premium Glassmorphic Card */}
-          <div id="workflow" style={{ flex: '1 1 300px', display: 'flex', justifyContent: 'center' }}>
+          <div id="workflow" className="mobile-w-full mobile-mt-16" style={{ flex: '1 1 300px', display: 'flex', justifyContent: 'center' }}>
             <PremiumHowItWorks />
           </div>
 

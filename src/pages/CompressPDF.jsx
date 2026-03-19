@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Upload, X, Download, Loader2, ArrowLeft } from 'lucide-react';
+import { UploadCard } from '../components/ui/upload-ui';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import formatFileSize from '../utils/formatFileSize';
 
@@ -718,92 +719,14 @@ export default function CompressPDF() {
             SECTION 2 — UPLOAD ZONE (no file loaded, not success)
             ═══════════════════════════════════════════════════════ */}
         {!pdfFile && !isSuccess && (
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragOver(true);
-            }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={handleDrop}
-            style={{
-              borderRadius: 28,
-              padding: '24px 28px',
-              minHeight: 140,
-              background: isDragOver ? '#6EE7B7' : '#BBF7D0',
-              boxShadow: isDragOver
-                ? '0 8px 0px rgba(21,128,61,0.55), 0 28px 70px rgba(22,163,74,0.5), inset 0 -12px 26px rgba(22,163,74,0.38), inset 0 12px 26px rgba(255,255,255,0.95)'
-                : '0 7px 0px rgba(21,128,61,0.4), 0 20px 55px rgba(22,163,74,0.32), inset 0 -10px 22px rgba(22,163,74,0.26), inset 0 10px 22px rgba(255,255,255,0.9)',
-              border: isDragOver
-                ? '2px dashed #059669'
-                : '2px dashed rgba(110,231,183,0.7)',
-              cursor: 'pointer',
-              transition: 'all 0.25s cubic-bezier(0.34,1.2,0.64,1)',
-              transform: isDragOver ? 'scale(1.015)' : 'scale(1)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 18,
-              marginBottom: 20,
-            }}
-          >
-            <div
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 14,
-                flexShrink: 0,
-                background: 'rgba(255,255,255,0.85)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow:
-                  '0 4px 0px rgba(21,128,61,0.22), 0 10px 26px rgba(22,163,74,0.2), inset 0 -4px 10px rgba(22,163,74,0.18), inset 0 4px 10px rgba(255,255,255,0.98)',
-              }}
-            >
-              <Upload size={22} color="#15803D" />
-            </div>
-
-            <div style={{ flex: 1 }}>
-              <p
-                style={{
-                  fontWeight: 800,
-                  fontSize: '1.05rem',
-                  color: '#14532D',
-                  margin: '0 0 3px',
-                }}
-              >
-                {isDragOver ? '📂 Drop your PDF here!' : 'Drop your PDF to compress'}
-              </p>
-              <p
-                style={{
-                  color: '#16A34A',
-                  fontSize: '0.82rem',
-                  margin: 0,
-                  fontWeight: 500,
-                }}
-              >
-                or click to browse • Single PDF file
-              </p>
-            </div>
-
-            <div
-              style={{
-                padding: '7px 14px',
-                borderRadius: 12,
-                flexShrink: 0,
-                background: 'rgba(255,255,255,0.65)',
-                color: '#15803D',
-                fontWeight: 700,
-                fontSize: '0.78rem',
-                boxShadow: 'inset 0 2px 6px rgba(255,255,255,0.8)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <Upload size={13} /> Select File
-            </div>
-
+          <div onDragOver={e => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} style={{ marginBottom: 20 }}>
+            <UploadCard
+              status="idle"
+              title={isDragOver ? "Drop your PDF here!" : "Drop your PDF to compress"}
+              description="or click to browse • Single PDF file"
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDrop}
+            />
             <input
               ref={fileInputRef}
               type="file"
@@ -811,6 +734,7 @@ export default function CompressPDF() {
               hidden
               onChange={(e) => {
                 if (e.target.files[0]) handleFileLoad(e.target.files[0]);
+                e.target.value = '';
               }}
             />
           </div>

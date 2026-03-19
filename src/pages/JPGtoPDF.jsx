@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Upload, Trash2, GripVertical, Download, Loader2, X, FileText } from 'lucide-react';
+import { GripVertical, Download, Loader2, X, FileText, Settings2 } from 'lucide-react';
+import { UploadCard } from '../components/ui/upload-ui';
+import clsx from 'clsx';
 import formatFileSize from '../utils/formatFileSize';
 
 
@@ -376,43 +378,23 @@ export default function JPGtoPDF() {
         {/* ─── MAIN LAYOUT (two-column when images loaded) ──── */}
         <div style={{ display: isSuccess ? 'none' : 'block' }}>
 
-          {/* ─── UPLOAD ZONE ───────────────────────────────────── */}
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={handleDrop}
-            style={{
-              borderRadius: 28, padding: '24px 28px', marginBottom: 20,
-              background: isDragOver ? '#F9A8D4' : '#FBCFE8',
-              boxShadow: isDragOver
-                ? '0 8px 0px rgba(190,24,93,0.55), 0 28px 70px rgba(219,39,119,0.5), inset 0 -12px 26px rgba(219,39,119,0.38), inset 0 12px 26px rgba(255,255,255,0.95)'
-                : S.drop,
-              border: isDragOver ? '2px dashed #BE185D' : '2px dashed rgba(244,114,182,0.7)',
-              cursor: 'pointer',
-              transition: 'all 0.25s cubic-bezier(0.34,1.2,0.64,1)',
-              transform: isDragOver ? 'scale(1.015)' : 'scale(1)',
-              display: 'flex', alignItems: 'center', gap: 18, minHeight: 120,
-            }}
-          >
-            <div style={{ width: 52, height: 52, borderRadius: 14, flexShrink: 0, background: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 0px rgba(190,24,93,0.22), 0 10px 26px rgba(219,39,119,0.2), inset 0 -4px 10px rgba(219,39,119,0.18), inset 0 4px 10px rgba(255,255,255,0.98)' }}>
-              <Upload size={22} color="#BE185D" />
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontWeight: 800, fontSize: '1.05rem', color: '#831843', margin: '0 0 3px' }}>
-                {isDragOver ? '📂 Drop images here!' : images.length ? 'Drop more images to add' : 'Drop images to convert to PDF'}
-              </p>
-              <p style={{ color: '#BE185D', fontSize: '0.82rem', margin: 0, fontWeight: 500 }}>or click to browse • JPG, PNG, WebP, HEIC • Multiple supported</p>
-            </div>
-            <div style={{ padding: '7px 14px', borderRadius: 12, flexShrink: 0, background: 'rgba(255,255,255,0.65)', color: '#BE185D', fontWeight: 700, fontSize: '0.78rem', boxShadow: 'inset 0 2px 6px rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Upload size={13} /> Select Files
-            </div>
-            <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.heic,.heif" multiple hidden onChange={e => { addImages(e.target.files); e.target.value = ''; }} />
+          {/* UPLOAD ZONE */}
+        {images.length === 0 && !isSuccess && (
+          <div onDragOver={e => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} style={{ marginBottom: 24 }}>
+            <UploadCard
+              status="idle"
+              title={isDragOver ? "Drop your Images here!" : "Drop Image files here"}
+              description="or click to browse • JPG, PNG, WEBP, HEIC"
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDrop}
+            />
           </div>
-
-          {/* ─── IMAGE GRID + SETTINGS (side by side) ─────────── */}
-          {images.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
+        )}<input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.heic,.heif" multiple hidden onChange={e => { addImages(e.target.files); e.target.value = ''; }} />
+          {/* ACTIVE WORKSPACE */}
+        {images.length > 0 && !isSuccess && (
+          <div style={{ marginBottom: 40 }}>
+            {/* Split Layout */}
+            <div className="tool-workspace-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
 
               {/* LEFT: Image reorder grid */}
               <div>
@@ -581,16 +563,11 @@ export default function JPGtoPDF() {
                 </div>
               </div>
             </div>
+          </div>
           )}
         </div>
 
-        {/* ─── EMPTY STATE WHEN NO IMAGES ─────────────────────── */}
-        {!images.length && !isSuccess && (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.45)' }}>
-            <div style={{ fontSize: '3rem', marginBottom: 12 }}>🖼️</div>
-            <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>Drop some images above to get started</p>
-          </div>
-        )}
+
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Upload, X, Download, Loader2, Plus } from 'lucide-react';
 import SignaturePad from '../components/features/SignaturePad';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { UploadCard } from '../components/ui/upload-ui';
 import formatFileSize from '../utils/formatFileSize';
 
 // Signature fonts bundled locally — no CDN needed, works fully offline
@@ -346,21 +347,21 @@ export default function SignPDF() {
 
         {/* UPLOAD ZONE */}
         {!pdfFile && !isSuccess && (
-          <div onClick={() => fileInputRef.current?.click()} onDragOver={e => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} onDrop={handleDrop}
-            style={{ borderRadius:28, padding:'24px 28px', minHeight:140, background: isDragOver ? '#FDE047' : '#FEF08A', boxShadow: isDragOver ? '0 8px 0px rgba(161,98,7,0.55), 0 28px 70px rgba(202,138,4,0.5), inset 0 -12px 26px rgba(202,138,4,0.38), inset 0 12px 26px rgba(255,255,255,0.95)' : '0 7px 0px rgba(161,98,7,0.4), 0 20px 55px rgba(202,138,4,0.32), inset 0 -10px 22px rgba(202,138,4,0.26), inset 0 10px 22px rgba(255,255,255,0.9)', border: isDragOver ? '2px dashed #A16207' : '2px dashed rgba(250,204,21,0.7)', cursor:'pointer', transition:'all 0.25s cubic-bezier(0.34,1.2,0.64,1)', transform: isDragOver ? 'scale(1.015)' : 'scale(1)', display:'flex', alignItems:'center', gap:18, marginBottom:20 }}>
-            <div style={{ width:52, height:52, borderRadius:14, flexShrink:0, background:'rgba(255,255,255,0.85)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:SS }}><Upload size={22} color="#A16207" /></div>
-            <div style={{ flex:1 }}>
-              <p style={{ fontWeight:800, fontSize:'1.05rem', color:'#422006', margin:'0 0 3px' }}>{isDragOver ? '📂 Drop your PDF here!' : 'Drop your PDF to sign'}</p>
-              <p style={{ color:'#A16207', fontSize:'0.82rem', margin:0, fontWeight:500 }}>or click to browse • Single PDF file</p>
-            </div>
-            <div style={{ padding:'7px 14px', borderRadius:12, flexShrink:0, background:'rgba(255,255,255,0.65)', color:'#A16207', fontWeight:700, fontSize:'0.78rem', boxShadow:'inset 0 2px 6px rgba(255,255,255,0.8)', display:'flex', alignItems:'center', gap:4 }}><Upload size={13} /> Select File</div>
+          <div onDragOver={e => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} style={{ marginBottom: 20 }}>
+            <UploadCard
+              status="idle"
+              title={isDragOver ? "Drop your PDF here!" : "Drop your PDF to sign"}
+              description="or click to browse • Single PDF file"
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDrop}
+            />
           </div>
         )}
         <input ref={fileInputRef} type="file" accept=".pdf" hidden onChange={e => { if (e.target.files[0]) handleFileLoad(e.target.files[0]); e.target.value=''; }} />
 
         {/* WORKSPACE */}
         {pdfFile && !isSuccess && (
-          <div style={{ display:'grid', gridTemplateColumns:'55% 45%', gap:16, marginBottom:16, alignItems:'start' }}>
+          <div className="tool-workspace-grid" style={{ display:'grid', gridTemplateColumns:'55% 45%', gap:16, marginBottom:16, alignItems:'start' }}>
 
             {/* LEFT — PDF preview */}
             <div>
@@ -480,7 +481,7 @@ export default function SignPDF() {
             {/* RIGHT — signature creator */}
             <div>
               <p style={{ color:'rgba(255,255,255,0.8)', fontSize:'0.78rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', margin:'0 0 10px' }}>Create Signature</p>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:12 }}>
+              <div className="mobile-grid-1" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:12 }}>
                 <ModeCard id="draw" emoji="✍️" label="Draw" />
                 <ModeCard id="type" emoji="⌨️" label="Type" />
                 <ModeCard id="upload" emoji="🖼️" label="Upload" />

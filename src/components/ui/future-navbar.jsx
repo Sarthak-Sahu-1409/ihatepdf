@@ -195,6 +195,7 @@ export default function FutureNavbar() {
           .lg-block { display: block !important; }
           .lg-flex { display: flex !important; }
           .lg-w-auto { width: auto !important; }
+          .lg-hidden { display: none !important; }
         }
       `}</style>
       
@@ -256,8 +257,8 @@ export default function FutureNavbar() {
               </div>
               
               <div
-                onClick={() => setShowMenu(true)}
-                className="fn-hidden" /* Mobile menu trigger is hidden, using lg-flex equivalent for mobile is complex, falling back to simple logic */
+                onClick={() => setShowMenu(!showMenu)}
+                className="lg-hidden" /* Hidden on desktop, shown on mobile */
                 style={{ cursor: 'pointer', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500, color: 'white' }}
               >
                 <Zap size={16} />
@@ -319,6 +320,17 @@ export default function FutureNavbar() {
             ]}
           />
         </div>
+
+        {/* Mobile menu dropdown */}
+        {showMenu && (
+          <div className="lg-hidden" style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(12px)', padding: '1rem 2rem', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '1.25rem', zIndex: 99, boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
+            <a href="#features" onClick={() => setShowMenu(false)} style={{ color: 'white', textDecoration: 'none', fontWeight: 500, fontSize: '1.1rem' }}>Features</a>
+            <a href="#tools" onClick={() => setShowMenu(false)} style={{ color: 'white', textDecoration: 'none', fontWeight: 500, fontSize: '1.1rem' }}>Tools</a>
+            <a href="#workflow" onClick={() => setShowMenu(false)} style={{ color: 'white', textDecoration: 'none', fontWeight: 500, fontSize: '1.1rem' }}>Workflow</a>
+            <a href="https://github.com/Sarthak-Sahu-1409/ihatepdf" target="_blank" onClick={() => setShowMenu(false)} style={{ color: 'white', textDecoration: 'none', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}><Github size={18}/> GitHub</a>
+            <div onClick={() => setShowMenu(false)} style={{ color: '#94a3b8', cursor: 'pointer', marginTop: '0.5rem', alignSelf: 'center', fontSize: '0.875rem', padding: '0.5rem' }}>Close Menu</div>
+          </div>
+        )}
       </div>
     </MobileMenuContext.Provider>
   );
