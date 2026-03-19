@@ -1,6 +1,5 @@
 import React from 'react';
 import { UploadCloud, Cpu, Download } from 'lucide-react';
-import { PixelCanvas } from './pixel-canvas';
 
 const steps = [
   {
@@ -24,13 +23,6 @@ export const PremiumHowItWorks = () => {
   return (
     <div className="phiw-wrapper">
       <div className="phiw-card group">
-        <PixelCanvas
-          gap={30}
-          speed={10}
-          colors={["#e0f2fe", "#7dd3fc", "#0ea5e9"]}
-          variant="default"
-          style={{ zIndex: 1 }}
-        />
         <div style={{ position: 'relative', zIndex: 10 }}>
           <div className="phiw-header">
             <span className="phiw-label">Workflow</span>
@@ -91,7 +83,7 @@ export const PremiumHowItWorks = () => {
         }
 
         .phiw-header {
-          text-align: left;
+          text-align: center;
           margin-bottom: 24px;
         }
 

@@ -130,9 +130,10 @@ export function GooeyText({
             whiteSpace: "nowrap",
             userSelect: "none",
             textAlign: "center",
+            opacity: "100%",
             ...textStyle
           }}
-        />
+        >{texts[0]}</span>
         <span
           ref={text2Ref}
           style={{
@@ -141,9 +142,10 @@ export function GooeyText({
             whiteSpace: "nowrap",
             userSelect: "none",
             textAlign: "center",
+            opacity: "0%",
             ...textStyle
           }}
-        />
+        >{texts[1 % texts.length]}</span>
       </div>
     </div>
   );
