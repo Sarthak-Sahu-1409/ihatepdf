@@ -26,7 +26,6 @@ export const PremiumHowItWorks = () => {
         <div style={{ position: 'relative', zIndex: 10 }}>
           <div className="phiw-header">
             <span className="phiw-label">Workflow</span>
-            <h2 className="phiw-title">How it works</h2>
           </div>
 
           <div className="phiw-timeline">
@@ -66,12 +65,14 @@ export const PremiumHowItWorks = () => {
 
         .phiw-card {
           position: relative;
-          background: #080c16;
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-top: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(30, 41, 59, 0.25); /* Transparent slate blend */
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 32px;
           padding: 32px 32px;
-          box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
           overflow: hidden;
           transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.5s ease;
           will-change: transform;
@@ -88,6 +89,15 @@ export const PremiumHowItWorks = () => {
         }
 
         .phiw-label {
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: #f8fafc;
+          letter-spacing: -0.03em;
+          margin-bottom: 4px;
+          display: inline-block;
+        }
+
+        .phiw-title {
           font-size: 0.75rem;
           font-weight: 800;
           text-transform: uppercase;
@@ -95,15 +105,6 @@ export const PremiumHowItWorks = () => {
           background: linear-gradient(to right, #60a5fa, #2dd4bf);
           -webkit-background-clip: text;
           color: transparent;
-          margin-bottom: 8px;
-          display: inline-block;
-        }
-
-        .phiw-title {
-          font-size: 1.75rem;
-          font-weight: 700;
-          color: #f8fafc;
-          letter-spacing: -0.03em;
           margin: 0;
           line-height: 1.1;
         }

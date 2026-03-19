@@ -333,8 +333,9 @@ export default function Landing() {
           {/* LEFT: Why IHatePDF — Flat Cards */}
           <div className="mobile-w-full" style={{ flex: '1 1 480px', minWidth: 0 }}>
             <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-              <h2 style={{ fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', fontWeight: 700, color: 'white', marginBottom: '4px', textShadow: '0 2px 10px rgba(0,0,0,0.15)', position: 'relative', display: 'inline-block' }}>
-                Why IHatePDF?
+              <h2 style={{ fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', fontWeight: 700, marginBottom: '4px', textShadow: '0 2px 10px rgba(0,0,0,0.15)', position: 'relative', display: 'inline-block' }}>
+                <span style={{ color: 'white' }}>Why </span>
+                <span style={{ color: '#818cf8' }}>IHatePDF?</span>
                 {/* Hand-drawn red pencil circle around the heading */}
                 <svg
                   key={`circle-${pencilKey}`}
@@ -378,9 +379,6 @@ export default function Landing() {
                   100% { stroke-dashoffset: 520; opacity: 0; }
                 }
               `}</style>
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', maxWidth: '460px', margin: '0 auto', lineHeight: 1.5 }}>
-                Fast, private, and completely free.
-              </p>
             </div>
             <div className="mobile-grid-1 mobile-gap-16" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px', height: '100%' }}>
               {features.map((f, i) => {
