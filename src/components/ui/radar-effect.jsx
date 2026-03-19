@@ -82,7 +82,7 @@ export const Radar = ({ style: extraStyle }) => {
           style={{
             height: `${(idx + 1) * 5}rem`,
             width: `${(idx + 1) * 5}rem`,
-            border: `1px solid rgba(148, 163, 184, ${0.25 - idx * 0.02})`,
+            border: `1px solid rgba(148, 163, 184, ${0.35 - idx * 0.02})`,
           }}
           key={`circle-${idx}`}
           idx={idx}

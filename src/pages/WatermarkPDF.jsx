@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Upload, X, Download, Loader2 } from 'lucide-react';
 import { UploadCard } from '../components/ui/upload-ui';
+import { DownloadButton } from '../components/ui/download-animation';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import formatFileSize from '../utils/formatFileSize';
 
@@ -671,20 +672,7 @@ export default function WatermarkPDF() {
             </div>
 
             {/* Download button */}
-            <button onClick={handleDownload} style={{
-              width: '100%', padding: '16px', borderRadius: '18px', border: 'none',
-              background: 'linear-gradient(160deg, #22D3EE, #0E7490)',
-              color: 'white', fontWeight: 800, fontSize: '1.05rem',
-              cursor: 'pointer', marginBottom: '10px',
-              boxShadow: '0 6px 0px rgba(14,116,144,0.5), 0 16px 40px rgba(6,182,212,0.4), inset 0 -6px 14px rgba(14,116,144,0.3), inset 0 6px 14px rgba(207,250,254,0.4)',
-              transition: 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            }}
-            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px) scale(1.01)'}
-            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0) scale(1)'}
-            >
-              <Download size={20} /> Download Watermarked PDF
-            </button>
+            <DownloadButton onDownload={handleDownload} label="Download Watermarked PDF" />
 
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={handleWatermarkAnother} style={{

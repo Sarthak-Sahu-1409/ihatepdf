@@ -4,6 +4,7 @@ import { Upload, X, Download, Loader2, Plus } from 'lucide-react';
 import SignaturePad from '../components/features/SignaturePad';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { UploadCard } from '../components/ui/upload-ui';
+import { DownloadButton } from '../components/ui/download-animation';
 import formatFileSize from '../utils/formatFileSize';
 
 // Signature fonts bundled locally — no CDN needed, works fully offline
@@ -337,7 +338,7 @@ export default function SignPDF() {
                 ))}
               </div>
             </div>
-            <button onClick={handleDownload} style={{ width:'100%', padding:16, borderRadius:18, border:'none', background:'linear-gradient(160deg,#FACC15,#A16207)', color:'white', fontWeight:800, fontSize:'1.05rem', cursor:'pointer', marginBottom:10, boxShadow:BS, transition:'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }} onMouseEnter={e => e.currentTarget.style.transform='translateY(-4px) scale(1.01)'} onMouseLeave={e => e.currentTarget.style.transform='translateY(0) scale(1)'}><Download size={20} /> Download Signed PDF</button>
+            <DownloadButton onDownload={handleDownload} label="Download Signed PDF" baseWidth="100%" />
             <div style={{ display:'flex', gap:10 }}>
               <button onClick={handleReset} style={{ flex:1, padding:11, borderRadius:14, border:'none', background:'rgba(255,255,255,0.7)', color:'#A16207', fontWeight:700, fontSize:'0.85rem', cursor:'pointer', boxShadow:SS, transition:'transform 0.2s ease' }} onMouseEnter={e => e.currentTarget.style.transform='translateY(-3px)'} onMouseLeave={e => e.currentTarget.style.transform='translateY(0)'}>✍️ Sign Another PDF</button>
               <Link to="/" style={{ flex:1, padding:11, borderRadius:14, background:'rgba(255,255,255,0.7)', color:'#3730A3', fontWeight:700, fontSize:'0.85rem', textDecoration:'none', textAlign:'center', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:SS, transition:'transform 0.2s ease' }} onMouseEnter={e => e.currentTarget.style.transform='translateY(-3px)'} onMouseLeave={e => e.currentTarget.style.transform='translateY(0)'}>← Back to Tools</Link>

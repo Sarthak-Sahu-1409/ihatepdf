@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Upload, X, Download, Loader2, ArrowLeft } from 'lucide-react';
+import { Upload, X, ArrowLeft, Download, Loader2 } from 'lucide-react';
 import { UploadCard } from '../components/ui/upload-ui';
+import { DownloadButton } from '../components/ui/download-animation';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import formatFileSize from '../utils/formatFileSize';
 
@@ -649,36 +650,10 @@ export default function CompressPDF() {
             )}
 
             {/* Download button */}
-            <button
-              onClick={handleDownload}
-              style={{
-                width: '100%',
-                padding: 14,
-                borderRadius: 18,
-                border: 'none',
-                background: 'linear-gradient(160deg, #22C55E, #16A34A)',
-                color: 'white',
-                fontWeight: 800,
-                fontSize: '1.05rem',
-                cursor: 'pointer',
-                marginBottom: 10,
-                boxShadow:
-                  '0 6px 0px rgba(21,128,61,0.5), 0 16px 40px rgba(22,163,74,0.4), inset 0 -6px 14px rgba(21,128,61,0.3), inset 0 6px 14px rgba(187,247,208,0.4)',
-                transition: 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.transform = 'translateY(-4px) scale(1.01)')
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.transform = 'translateY(0) scale(1)')
-              }
-            >
-              <Download size={20} /> Download Compressed PDF
-            </button>
+            <DownloadButton 
+              onDownload={handleDownload} 
+              label="Download Compressed PDF" 
+            />
 
             {/* Compress another */}
             <div style={{ display: 'flex', gap: '10px' }}>

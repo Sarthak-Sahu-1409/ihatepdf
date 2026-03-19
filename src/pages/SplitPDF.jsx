@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Upload, Download, ArrowLeft, Plus, Trash2, Scissors, X, Loader2 } from 'lucide-react';
 import { UploadCard } from '../components/ui/upload-ui';
+import { DownloadButton } from '../components/ui/download-animation';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 /* ─── helpers ─────────────────────────────────────────── */
@@ -309,21 +310,10 @@ export default function SplitPDF() {
 
             {/* Download all button */}
             {outputs.length > 1 && (
-              <button
-                onClick={downloadAll}
-                style={{
-                  width: '100%', padding: '14px 20px', borderRadius: 18, border: 'none',
-                  background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
-                  color: 'white', fontWeight: 800, fontSize: '1rem', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  marginBottom: 20, boxShadow: S.btn,
-                  transition: 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
-                }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-              >
-                <Download size={20} /> Download All {outputs.length} Files
-              </button>
+              <DownloadButton
+                onDownload={downloadAll}
+                label={`Download All ${outputs.length} Files`}
+              />
             )}
 
             {/* Individual output cards grid */}
@@ -349,21 +339,10 @@ export default function SplitPDF() {
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => downloadOne(item)}
-                    style={{
-                      width: '100%', padding: '8px 12px', borderRadius: 12, border: 'none',
-                      background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)',
-                      color: 'white', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                      boxShadow: '0 4px 0px rgba(109,40,217,0.35), 0 10px 24px rgba(124,58,237,0.28)',
-                      transition: 'transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                  >
-                    <Download size={13} /> Download
-                  </button>
+                  <DownloadButton
+                    onDownload={() => downloadOne(item)}
+                    label="Download"
+                  />
                 </div>
               ))}
             </div>

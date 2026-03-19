@@ -1,9 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Upload, Trash2, GripVertical, Plus, Download, Loader2, X, ArrowLeft,
-} from 'lucide-react';
+import { Upload, X, ArrowLeft, Plus, Trash2, Download, GripVertical, Loader2 } from 'lucide-react';
 import { UploadCard } from '../components/ui/upload-ui';
+import { DownloadButton } from '../components/ui/download-animation';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 /* ────────────────────────────────────────────────────────────────
@@ -1002,39 +1001,8 @@ export default function MergePDF() {
               {totalSelectedPages} pages merged from {pdfFiles.length} PDFs
             </p>
 
-            {/* download button — big and chunky */}
-            <button
-              onClick={handleDownload}
-              style={{
-                padding: '14px 44px',
-                borderRadius: 22,
-                border: 'none',
-                background:
-                  'linear-gradient(160deg, #22C55E 0%, #16A34A 100%)',
-                color: 'white',
-                fontWeight: 800,
-                fontSize: '1.05rem',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 10,
-                marginBottom: 14,
-                boxShadow:
-                  '0 8px 0px rgba(21,128,61,0.55), 0 20px 50px rgba(22,163,74,0.45), inset 0 -8px 18px rgba(21,128,61,0.35), inset 0 8px 18px rgba(200,255,210,0.45)',
-                transition:
-                  'transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease',
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.transform =
-                  'translateY(-5px) scale(1.02)')
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.transform =
-                  'translateY(0) scale(1)')
-              }
-            >
-              <Download size={20} /> Download Merged PDF
-            </button>
+            {/* download button */}
+            <DownloadButton onDownload={handleDownload} label="Download Merged PDF" />
 
             {/* secondary actions — clay pills */}
             <div
