@@ -1,48 +1,29 @@
 // Input: PDF file + watermark settings; Output: watermarked PDF blob for download
-// Watermark PDF page — supports text & image watermarks with live canvas preview
-import { useState, useRef, useEffect } from 'react';
+// Watermark PDF page — text & image watermarks, centered layout, fixed diagonal text angle
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Upload, X, Download, Loader2 } from 'lucide-react';
+import {
+  X, Loader2, ArrowLeft, AlertTriangle, Check, Type, Image as ImageIcon, FileText, Eye, Droplets,
+} from 'lucide-react';
 import { UploadCard } from '../components/ui/upload-ui';
 import { DownloadButton } from '../components/ui/download-animation';
 import { saveBlobToDisk } from '../utils/saveBlobToDisk';
+import MotionButton from '../components/ui/motion-button';
+import { HeroDitheringCard } from '../components/ui/hero-dithering-card';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import formatFileSize from '../utils/formatFileSize';
 
-/* ── Shared style constants ────────────────────────────────── */
-const sectionLabel = {
-  fontSize: '0.72rem', fontWeight: 700, color: '#155E75',
-  textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px',
-};
+/** Fixed diagonal angle for text watermarks (matches typical “CONFIDENTIAL” stamp). */
+const WM_TEXT_ROTATION = -45;
+/** Watermark is always centered on the page (rotation/position controls removed). */
+const WM_LAYOUT_POSITION = 'center';
 
-const statPill = {
-  padding: '5px 12px', borderRadius: '10px',
-  background: 'rgba(255,255,255,0.75)',
-  fontSize: '0.8rem', fontWeight: 600, color: '#083344',
-  boxShadow: 'inset 0 2px 6px rgba(255,255,255,0.8)',
-  display: 'flex', alignItems: 'center', gap: '4px',
-};
-
-const CLAY_CARD = '0 6px 0px rgba(14,116,144,0.35), 0 18px 45px rgba(6,182,212,0.28), inset 0 -8px 20px rgba(6,182,212,0.22), inset 0 8px 20px rgba(255,255,255,0.9)';
-
-const cardStyle = {
-  borderRadius: '22px', padding: '16px',
-  background: '#CFFAFE',
-  boxShadow: CLAY_CARD,
-};
-
-
-const POS_GRID = [
-  { id: 'top-left',     label: '↖' },
-  { id: 'top',          label: '↑' },
-  { id: 'top-right',    label: '↗' },
-  { id: 'left',         label: '←' },
-  { id: 'center',       label: '⊕' },
-  { id: 'right',        label: '→' },
-  { id: 'bottom-left',  label: '↙' },
-  { id: 'bottom',       label: '↓' },
-  { id: 'bottom-right', label: '↘' },
-];
+const ACCENT = '#22D3EE';
+const ACCENT_SOFT = 'rgba(34, 211, 238, 0.14)';
+/** ~20% tighter layout than the default tool shell */
+const LAYOUT_GAP = 13;
+const WORKSPACE_ABOVE_ACTION = 22;
+const PAGE_MAX_WIDTH = 768;
 
 /* Returns {x,y} for text watermark on canvas (text anchor = center) */
 function getPreviewPosition(cW, cH, pos) {
@@ -104,36 +85,6 @@ function rotationAdjustedOrigin(cx, cy, drawW, drawH, rotDeg) {
   };
 }
 
-/* ── Position grid sub-component ───────────────────────────── */
-// Input: wmPosition (string), setWmPosition (fn); Output: 3x3 grid UI
-function PositionGrid({ wmPosition, setWmPosition }) {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
-      {POS_GRID.map((pos) => {
-        const isSel = wmPosition === pos.id;
-        return (
-          <div
-            key={pos.id}
-            onClick={() => setWmPosition(pos.id)}
-            style={{
-              padding: '8px', borderRadius: '10px', cursor: 'pointer',
-              textAlign: 'center', fontSize: '1.1rem',
-              background: isSel ? '#A5F3FC' : 'rgba(255,255,255,0.55)',
-              boxShadow: isSel
-                ? '0 3px 0px rgba(14,116,144,0.4), 0 8px 18px rgba(6,182,212,0.28)'
-                : 'inset 0 2px 4px rgba(255,255,255,0.7)',
-              transform: isSel ? 'translateY(-2px) scale(1.05)' : 'none',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            {pos.label}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 /* ═══════════════════════════════════════════════════════════════
    Main component
    ═══════════════════════════════════════════════════════════════ */
@@ -153,8 +104,6 @@ export default function WatermarkPDF() {
   const [fontSize, setFontSize]         = useState(60);
   const [wmColor, setWmColor]           = useState('#1a1a1a');
   const [opacity, setOpacity]           = useState(0.25);
-  const [rotation, setRotation]         = useState(-45);
-  const [wmPosition, setWmPosition]     = useState('center');
 
   /* ── Image watermark settings ───────────────────────────── */
   const [wmImageFile, setWmImageFile]         = useState(null);
@@ -169,7 +118,7 @@ export default function WatermarkPDF() {
   /* ── Preview ────────────────────────────────────────────── */
   const [isUpdatingPreview, setIsUpdatingPreview] = useState(false);
   const previewDebounceRef  = useRef(null);
-  const previewScaleRef     = useRef(1.5);
+  const previewScaleRef     = useRef(1.2);
   const pdfJsDocRef         = useRef(null);
   const renderedPageDataRef = useRef(null);
 
@@ -187,6 +136,10 @@ export default function WatermarkPDF() {
   const fileInputRef     = useRef(null);
   const previewCanvasRef = useRef(null);
   const imgWmRef         = useRef(null);
+  const leftWorkspaceColRef = useRef(null);
+
+  /** Pixel height of the settings column; right column matches this so both rows align. */
+  const [workspaceColHeight, setWorkspaceColHeight] = useState(null);
 
   /* ── Page index helper ──────────────────────────────────── */
   // Input: total page count; Output: array of 0-based page indices per scope setting
@@ -215,14 +168,12 @@ export default function WatermarkPDF() {
   };
 
   /* ── Preset stamps ──────────────────────────────────────── */
-  // Input: stamp preset object {label, color, rotation}; Output: sets text state
-  const applyPreset = ({ label, color, rotation: rot }) => {
+  // Input: { label, color }; Output: updates text watermark fields (fixed center / −45°).
+  const applyPreset = ({ label, color }) => {
     setWmText(label);
     setWmColor(color);
-    setRotation(rot);
     setOpacity(0.25);
     setFontSize(60);
-    setWmPosition('center');
   };
 
   /* ── Canvas watermark overlay ───────────────────────────── */
@@ -241,9 +192,9 @@ export default function WatermarkPDF() {
       ctx.fillStyle = wmColor;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const { x, y } = getPreviewPosition(canvas.width, canvas.height, wmPosition);
+      const { x, y } = getPreviewPosition(canvas.width, canvas.height, WM_LAYOUT_POSITION);
       ctx.translate(x, y);
-      ctx.rotate((rotation * Math.PI) / 180);
+      ctx.rotate((WM_TEXT_ROTATION * Math.PI) / 180);
       ctx.fillText(wmText, 0, 0);
       ctx.restore();
     } else if (wmType === 'image' && wmImagePreview) {
@@ -256,7 +207,7 @@ export default function WatermarkPDF() {
         ctx.globalAlpha = opacity;
         const drawW = (canvas.width * imgScalePercent) / 100;
         const drawH = (img.height / img.width) * drawW;
-        const { x, y } = getPreviewPositionXY(canvas.width, canvas.height, drawW, drawH, wmPosition);
+        const { x, y } = getPreviewPositionXY(canvas.width, canvas.height, drawW, drawH, WM_LAYOUT_POSITION);
         ctx.drawImage(img, x, y, drawW, drawH);
         ctx.restore();
       };
@@ -290,7 +241,7 @@ export default function WatermarkPDF() {
     }, 280);
     return () => clearTimeout(previewDebounceRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wmText, fontSize, wmColor, opacity, rotation, wmPosition, wmType,
+  }, [wmText, fontSize, wmColor, opacity, wmType,
       wmImagePreview, imgScalePercent, pageRendered]);
 
   /* After pageRendered flips true, draw the initial watermark */
@@ -298,6 +249,20 @@ export default function WatermarkPDF() {
     if (pageRendered) drawWatermarkOnPreview();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageRendered]);
+
+  // Input: none. Output: keeps preview column height equal to the settings column.
+  useLayoutEffect(() => {
+    const el = leftWorkspaceColRef.current;
+    if (!el || !pdfFile) {
+      setWorkspaceColHeight(null);
+      return undefined;
+    }
+    const measure = () => setWorkspaceColHeight(el.getBoundingClientRect().height);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [pdfFile, wmType, pageScope, pageCount, wmImagePreview]);
 
   /* ── File load ──────────────────────────────────────────── */
   // Input: File object; Output: loads PDF with pdfjs, sets pageCount + thumbnail
@@ -417,11 +382,9 @@ export default function WatermarkPDF() {
         if (wmType === 'text' && font) {
           const textW = font.widthOfTextAtSize(wmText, fontSize);
           const textH = font.heightAtSize(fontSize);
-          const { cx, cy } = getPdfCenter(pageW, pageH, wmPosition);
-          // pdf-lib uses CCW-positive rotation (Y-axis up / mathematical convention).
-          // Canvas uses CW-positive rotation (Y-axis down / screen convention).
-          // Negate the angle so the PDF result matches the live preview exactly.
-          const pdfRot = -rotation;
+          const { cx, cy } = getPdfCenter(pageW, pageH, WM_LAYOUT_POSITION);
+          // pdf-lib uses CCW-positive rotation; canvas preview is CW-positive — negate to match preview.
+          const pdfRot = -WM_TEXT_ROTATION;
           const { x, y } = rotationAdjustedOrigin(cx, cy, textW, textH, pdfRot);
           const { r, g, b } = hexToRgb(wmColor);
 
@@ -438,8 +401,8 @@ export default function WatermarkPDF() {
           const scale  = (pageW * imgScalePercent / 100) / embeddedImg.width;
           const drawW  = embeddedImg.width  * scale;
           const drawH  = embeddedImg.height * scale;
-          const { cx, cy } = getPdfCenter(pageW, pageH, wmPosition);
-          // Images don't rotate in this tool, so just center the bounding box.
+          const { cx, cy } = getPdfCenter(pageW, pageH, WM_LAYOUT_POSITION);
+          // Image watermark: centered, no rotation.
           const { x, y } = rotationAdjustedOrigin(cx, cy, drawW, drawH, 0);
 
           page.drawImage(embeddedImg, {
@@ -482,8 +445,6 @@ export default function WatermarkPDF() {
     setFontSize(60);
     setWmColor('#1a1a1a');
     setOpacity(0.25);
-    setRotation(-45);
-    setWmPosition('center');
     setWmType('text');
     setPageScope('all');
     setCustomFrom(1);
@@ -493,215 +454,107 @@ export default function WatermarkPDF() {
     setWmImagePreview(null);
   };
 
+  const sectionLabel = {
+    fontSize: '0.68rem', fontWeight: 700, color: '#94A3B8',
+    textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px',
+  };
+
+  const darkCard = {
+    borderRadius: 14,
+    padding: '18px 18px',
+    backgroundColor: '#14151a',
+    backgroundImage: [
+      `radial-gradient(120% 80% at 0% 0%, ${ACCENT_SOFT.replace('0.14', '0.12')} 0%, transparent 55%)`,
+      'linear-gradient(165deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 42%, rgba(0,0,0,0.12) 100%)',
+    ].join(', '),
+    border: '1px solid rgba(255,255,255,0.1)',
+    boxShadow: '0 24px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,0,0,0.2) inset, inset 0 1px 0 rgba(255,255,255,0.08)',
+  };
+
+  const ghostBtn = {
+    padding: '10px 20px', borderRadius: 8,
+    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
+    fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
+    color: '#E4E4E7', transition: 'all 0.2s ease',
+  };
+
   /* ════════════════════════════════════════════════════════════
      RENDER
      ════════════════════════════════════════════════════════════ */
   return (
-    <div style={{
-      minHeight: '100vh',
-      fontFamily: "'Inter', system-ui, sans-serif",
-      padding: '32px 24px 160px',
-      overflowX: 'hidden',
-    }}>
-      <div style={{ maxWidth: '780px', margin: '0 auto' }}>
+    <div style={{ minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif", overflowX: 'hidden', padding: '26px 13px 96px' }}>
+      <div style={{ maxWidth: PAGE_MAX_WIDTH, margin: '0 auto' }}>
 
-        {/* ─── SECTION 1: PAGE HEADER ─────────────────────── */}
-        <div style={{ marginBottom: '28px' }}>
-          <Link to="/" style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px',
-            padding: '8px 18px', borderRadius: '14px', marginBottom: '24px',
-            background: 'rgba(255,255,255,0.88)', color: '#3730A3',
-            fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none',
-            boxShadow: '0 4px 0px rgba(55,48,163,0.2), 0 10px 28px rgba(60,100,220,0.18), inset 0 -3px 8px rgba(100,130,220,0.15), inset 0 3px 8px rgba(255,255,255,0.98)',
-            transition: 'transform 0.2s ease',
-          }}
-          onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-          onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-          >← Back</Link>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '10px' }}>
-            <div style={{
-              width: '52px', height: '52px', borderRadius: '16px', flexShrink: 0,
-              background: '#CFFAFE',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 5px 0px rgba(14,116,144,0.42), 0 14px 36px rgba(6,182,212,0.34), inset 0 -6px 14px rgba(6,182,212,0.28), inset 0 6px 14px rgba(255,255,255,0.95)',
-            }}>
-              <span style={{ fontSize: '1.5rem' }}>💧</span>
-            </div>
-            <div>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'white', margin: 0,
-                           textShadow: '0 2px 12px rgba(0,0,0,0.2)' }}>
-                Watermark PDF
-              </h1>
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem', margin: 0 }}>
-                Stamp text or logo on every page — 100% private, runs in your browser
-              </p>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {[
-              { icon: '🔒', text: 'Files never uploaded' },
-              { icon: '👁️', text: 'Live preview'         },
-              { icon: '🎨', text: 'Full design control'  },
-            ].map((b, i) => (
-              <div key={i} style={{
-                display: 'inline-flex', alignItems: 'center', gap: '5px',
-                padding: '5px 14px', borderRadius: '999px',
-                background: 'rgba(255,255,255,0.15)',
-                border: '1px solid rgba(255,255,255,0.25)',
-                color: 'rgba(255,255,255,0.9)', fontSize: '0.78rem', fontWeight: 600,
-              }}>{b.icon} {b.text}</div>
-            ))}
-          </div>
+        <div style={{ marginBottom: 22 }}>
+          <Link
+            to="/"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 16px', borderRadius: 16,
+              background: 'rgba(255,255,255,0.06)', fontWeight: 600,
+              color: '#E4E4E7', textDecoration: 'none',
+              border: '1px solid rgba(255,255,255,0.08)',
+              transition: 'all 0.2s ease', marginBottom: 20,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#E4E4E7'; }}
+          >
+            <ArrowLeft size={16} /> Back to Home
+          </Link>
+          <h1 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.4rem)', fontWeight: 800, color: 'white', margin: 0, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+            Watermark PDF
+          </h1>
         </div>
 
-        {/* ─── SECTION 8: ERROR ───────────────────────────── */}
         {error && (
           <div style={{
-            borderRadius: '20px', padding: '16px 20px', marginBottom: '16px',
-            background: '#FEE2E2',
-            boxShadow: '0 5px 0px rgba(185,28,28,0.28), 0 14px 36px rgba(220,38,38,0.22), inset 0 -6px 14px rgba(220,38,38,0.18), inset 0 6px 14px rgba(255,255,255,0.85)',
-            display: 'flex', alignItems: 'flex-start', gap: '12px',
+            borderRadius: 12, padding: '16px 20px',
+            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+            display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 20,
           }}>
-            <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>⚠️</span>
+            <AlertTriangle size={18} color="#F87171" style={{ flexShrink: 0, marginTop: 1 }} />
             <div style={{ flex: 1 }}>
-              <p style={{ fontWeight: 700, color: '#991B1B', fontSize: '0.9rem', margin: '0 0 3px' }}>
-                Watermark failed
-              </p>
-              <p style={{ color: '#B91C1C', fontSize: '0.8rem', margin: 0 }}>{error}</p>
+              <p style={{ fontWeight: 700, color: '#F87171', fontSize: '0.9rem', margin: '0 0 2px' }}>Watermark failed</p>
+              <p style={{ fontSize: '0.8rem', color: '#FCA5A5', margin: 0 }}>{error}</p>
             </div>
-            <button onClick={() => setError(null)} style={{
-              padding: '5px 12px', borderRadius: '10px', border: 'none',
-              background: 'rgba(255,255,255,0.7)', color: '#991B1B',
-              fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', flexShrink: 0,
-            }}>Dismiss</button>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.78rem', cursor: 'pointer', color: '#E4E4E7', fontWeight: 600, transition: 'all 0.2s ease' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#E4E4E7'; }}
+            >
+              Dismiss
+            </button>
           </div>
         )}
 
-        {/* ─── SECTION 7: SUCCESS STATE ───────────────────── */}
         {isSuccess && outputBlob && (
-          <div style={{
-            borderRadius: '32px', padding: '36px 32px',
-            background: 'linear-gradient(145deg, #ECFEFF, #CFFAFE)',
-            boxShadow: '0 12px 0px rgba(14,116,144,0.4), 0 36px 90px rgba(6,182,212,0.42), inset 0 -14px 32px rgba(6,182,212,0.26), inset 0 14px 32px rgba(255,255,255,0.95)',
-            marginBottom: '16px',
-          }}>
-            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <div style={{
-                width: '68px', height: '68px', borderRadius: '20px', margin: '0 auto 14px',
-                background: '#CFFAFE', fontSize: '2rem',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 7px 0px rgba(14,116,144,0.4), 0 18px 44px rgba(6,182,212,0.3), inset 0 -7px 16px rgba(6,182,212,0.25), inset 0 7px 16px rgba(255,255,255,0.95)',
-              }}>✅</div>
-              <h3 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#083344', margin: '0 0 4px' }}>
-                Watermark Applied!
-              </h3>
-              <p style={{ color: '#0E7490', fontSize: '0.82rem', margin: 0 }}>
-                🔒 Processed entirely in your browser — never uploaded anywhere
-              </p>
-            </div>
-
-            {/* Before / After comparison */}
-            <div style={{
-              borderRadius: '20px', padding: '20px', marginBottom: '20px',
-              background: 'rgba(255,255,255,0.6)',
-              boxShadow: 'inset 0 3px 10px rgba(255,255,255,0.7), inset 0 -3px 10px rgba(14,116,144,0.08)',
-            }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr',
-                            gap: '12px', alignItems: 'center' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#9CA3AF',
-                               textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 4px' }}>
-                    Original
-                  </p>
-                  <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0E7490', margin: '0 0 2px' }}>
-                    {formatFileSize(pdfFile.size)}
-                  </p>
-                  <p style={{ fontSize: '0.7rem', color: '#6B7280', margin: 0 }}>{pageCount} pages</p>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    padding: '6px 10px', borderRadius: '12px', background: '#A5F3FC',
-                    boxShadow: '0 3px 0px rgba(14,116,144,0.3), 0 8px 20px rgba(6,182,212,0.22)',
-                    marginBottom: '4px',
-                  }}>
-                    <p style={{ fontSize: '0.8rem', fontWeight: 900, color: '#083344', margin: 0 }}>💧</p>
-                  </div>
-                  <span style={{ fontSize: '1.1rem' }}>→</span>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#9CA3AF',
-                               textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 4px' }}>
-                    Watermarked
-                  </p>
-                  <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0E7490', margin: '0 0 2px' }}>
-                    {formatFileSize(outputBlob.size)}
-                  </p>
-                  <p style={{ fontSize: '0.7rem', color: '#6B7280', margin: 0 }}>
-                    {getTargetPageCount()} pages stamped
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Watermark summary chips */}
-            <div style={{
-              borderRadius: '14px', padding: '10px 16px', marginBottom: '20px',
-              background: 'rgba(255,255,255,0.5)',
-              display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap',
-            }}>
-              <span style={{ fontSize: '1rem' }}>💧</span>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {[
-                  wmType === 'text' ? `"${wmText}"` : 'Image watermark',
-                  `${Math.round(opacity * 100)}% opacity`,
-                  `${getTargetPageCount()} of ${pageCount} pages`,
-                ].map((chip, i) => (
-                  <span key={i} style={{
-                    padding: '3px 10px', borderRadius: '8px',
-                    background: '#A5F3FC', fontSize: '0.75rem',
-                    fontWeight: 700, color: '#083344',
-                  }}>{chip}</span>
-                ))}
-              </div>
-            </div>
-
-            {/* Download button */}
-            <DownloadButton
-              onDownload={handleDownload}
-              label="Download Watermarked PDF"
-              disabled={!outputBlob}
-            />
-
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={handleWatermarkAnother} style={{
-                flex: 1, padding: '11px', borderRadius: '14px', border: 'none',
-                background: 'rgba(255,255,255,0.7)', color: '#0E7490',
-                fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer',
-                boxShadow: '0 4px 0px rgba(14,116,144,0.18), 0 10px 24px rgba(6,182,212,0.14), inset 0 -4px 10px rgba(6,182,212,0.1), inset 0 4px 10px rgba(255,255,255,0.95)',
-                transition: 'transform 0.2s ease',
-              }}
-              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+          <HeroDitheringCard accentColor={ACCENT} minHeight={304} style={{ marginBottom: 16 }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white', marginBottom: 6, letterSpacing: '-0.02em', textAlign: 'center' }}>
+              Watermark applied
+            </h3>
+            <DownloadButton onDownload={handleDownload} label="Download watermarked PDF" disabled={!outputBlob} />
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 16 }}>
+              <button
+                type="button"
+                onClick={handleWatermarkAnother}
+                style={{ ...ghostBtn, display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#E4E4E7'; }}
               >
-                💧 Watermark Another
+                <Droplets size={16} /> Watermark another PDF
               </button>
-              <Link to="/" style={{
-                flex: 1, padding: '11px', borderRadius: '14px',
-                background: 'rgba(255,255,255,0.7)', color: '#3730A3',
-                fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none',
-                textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 0px rgba(55,48,163,0.18), 0 10px 24px rgba(60,100,220,0.14), inset 0 -4px 10px rgba(100,130,220,0.1), inset 0 4px 10px rgba(255,255,255,0.95)',
-                transition: 'transform 0.2s ease',
-              }}
-              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+              <Link
+                to="/"
+                style={{ ...ghostBtn, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#E4E4E7'; }}
               >
-                ← Back to Tools
+                <ArrowLeft size={16} /> Back to Tools
               </Link>
             </div>
-          </div>
+          </HeroDitheringCard>
         )}
 
         {/* ─── SECTION 2: UPLOAD ZONE ─────────────────────── */}
@@ -711,8 +564,8 @@ export default function WatermarkPDF() {
               <div onDragOver={e => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} style={{ marginBottom: 20 }}>
                 <UploadCard
                   status="idle"
-                  title={isDragOver ? "Drop your PDF here!" : "Drop your PDF to watermark"}
-                  description="or click to browse • Single PDF file"
+                  title={isDragOver ? 'Drop your PDF here' : 'Drop your PDF to watermark'}
+                  description="or click to browse · single PDF"
                   onClick={() => fileInputRef.current?.click()}
                   onDrop={handleDrop}
                 />
@@ -720,7 +573,7 @@ export default function WatermarkPDF() {
                   ref={fileInputRef}
                   type="file"
                   accept=".pdf"
-                  style={{ display: 'none' }}
+                  hidden
                   onChange={(e) => { 
                     const f = e.target.files[0]; 
                     if (f) handleFileLoad(f); 
@@ -732,89 +585,75 @@ export default function WatermarkPDF() {
 
             {/* ─── SECTION 3: FILE INFO CARD ─────────────── */}
             {pdfFile && (
-              <div style={{
-                borderRadius: '20px', padding: '14px 18px', marginBottom: '20px',
-                background: '#CFFAFE',
-                boxShadow: '0 6px 0px rgba(14,116,144,0.35), 0 18px 45px rgba(6,182,212,0.28), inset 0 -8px 20px rgba(6,182,212,0.22), inset 0 8px 20px rgba(255,255,255,0.9)',
-                display: 'flex', alignItems: 'center', gap: '12px',
-              }}>
+              <div style={{ ...darkCard, padding: '13px 16px', marginBottom: LAYOUT_GAP, display: 'flex', alignItems: 'center', gap: 11 }}>
                 <div style={{
-                  width: '44px', height: '56px', borderRadius: '8px', flexShrink: 0,
-                  overflow: 'hidden', background: '#E0F2FE',
-                  boxShadow: '0 3px 0px rgba(14,116,144,0.28), 0 8px 18px rgba(6,182,212,0.2)',
+                  width: 34, height: 42, borderRadius: 8, flexShrink: 0, overflow: 'hidden',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
                 }}>
-                  {pdfThumbnail
-                    ? <img src={pdfThumbnail} alt="PDF thumbnail"
-                           style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex',
-                                    alignItems: 'center', justifyContent: 'center',
-                                    fontSize: '1.2rem' }}>📄</div>
-                  }
+                  {pdfThumbnail ? (
+                    <img src={pdfThumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <FileText size={18} color="#71717A" />
+                    </div>
+                  )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: 700, color: '#083344', fontSize: '0.9rem',
-                               margin: '0 0 3px', overflow: 'hidden',
-                               textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <p style={{ fontWeight: 700, color: '#FAFAFA', fontSize: '0.8rem', margin: '0 0 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {pdfFile.name}
                   </p>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#0E7490', fontWeight: 600 }}>
-                      📦 {formatFileSize(pdfFile.size)}
-                    </span>
-                    <span style={{ fontSize: '0.75rem', color: '#0E7490', fontWeight: 600 }}>
-                      📄 {pageCount} page{pageCount !== 1 ? 's' : ''}
-                    </span>
-                  </div>
+                  <p style={{ color: '#94A3B8', fontSize: '0.72rem', margin: 0 }}>
+                    {formatFileSize(pdfFile.size)} · {pageCount} page{pageCount !== 1 ? 's' : ''}
+                  </p>
                 </div>
-                <button onClick={handleRemoveFile} style={{
-                  width: '32px', height: '32px', borderRadius: '8px', border: 'none',
-                  background: '#FEE2E2', cursor: 'pointer', flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 3px 0px rgba(185,28,28,0.25), 0 8px 18px rgba(220,38,38,0.15)',
-                }}>
-                  <X size={14} color="#DC2626" />
+                <button
+                  type="button"
+                  onClick={handleRemoveFile}
+                  style={{
+                    width: 28, height: 28, borderRadius: 8, border: '1px solid rgba(239,68,68,0.25)',
+                    background: 'transparent', cursor: 'pointer', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F87171',
+                  }}
+                >
+                  <X size={14} />
                 </button>
               </div>
             )}
 
             {/* ─── SECTION 4: SETTINGS + LIVE PREVIEW ─────── */}
             {pdfFile && (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '16px',
-                marginBottom: '16px',
-                alignItems: 'start',
-              }}>
+              <div className="tool-workspace-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: LAYOUT_GAP, marginBottom: 0, alignItems: 'start' }}>
 
-                {/* ══ LEFT COLUMN — SETTINGS ══ */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div ref={leftWorkspaceColRef} style={{ display: 'flex', flexDirection: 'column', gap: LAYOUT_GAP, minWidth: 0 }}>
 
-                  {/* WATERMARK TYPE TOGGLE */}
-                  <div style={cardStyle}>
-                    <p style={sectionLabel}>Watermark Type</p>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={darkCard}>
+                    <p style={sectionLabel}>Watermark type</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       {[
-                        { id: 'text',  emoji: '✍️', label: 'Text'  },
-                        { id: 'image', emoji: '🖼️', label: 'Image' },
-                      ].map((t) => {
-                        const isSel = wmType === t.id;
+                        { id: 'text', Icon: Type, label: 'Text' },
+                        { id: 'image', Icon: ImageIcon, label: 'Image' },
+                      ].map(({ id, Icon, label }) => {
+                        const isSel = wmType === id;
                         return (
-                          <div key={t.id} onClick={() => setWmType(t.id)} style={{
-                            flex: 1, textAlign: 'center', padding: '10px',
-                            borderRadius: '14px', cursor: 'pointer',
-                            background: isSel ? '#A5F3FC' : 'rgba(255,255,255,0.5)',
-                            boxShadow: isSel
-                              ? '0 5px 0px rgba(14,116,144,0.45), 0 14px 32px rgba(6,182,212,0.35), inset 0 -6px 14px rgba(6,182,212,0.28), inset 0 6px 14px rgba(255,255,255,0.92)'
-                              : '0 2px 0px rgba(14,116,144,0.15), inset 0 2px 6px rgba(255,255,255,0.65)',
-                            transform: isSel ? 'translateY(-3px) scale(1.02)' : 'none',
-                            transition: 'all 0.2s cubic-bezier(0.34,1.2,0.64,1)',
-                          }}>
-                            <div style={{ fontSize: '1.3rem', marginBottom: '3px' }}>{t.emoji}</div>
-                            <p style={{ fontWeight: 700, color: '#083344', fontSize: '0.82rem', margin: 0 }}>
-                              {t.label}
-                            </p>
-                          </div>
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => setWmType(id)}
+                            style={{
+                              borderRadius: 12, padding: '10px 6px', textAlign: 'center', cursor: 'pointer', width: '100%',
+                              background: isSel ? 'rgba(34,211,238,0.15)' : 'rgba(255,255,255,0.04)',
+                              border: `1px solid ${isSel ? 'rgba(34,211,238,0.45)' : 'rgba(255,255,255,0.08)'}`,
+                              transition: 'all 0.2s ease', position: 'relative',
+                            }}
+                          >
+                            {isSel && (
+                              <div style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Check size={10} strokeWidth={3} color="#0c1222" />
+                              </div>
+                            )}
+                            <Icon size={18} color={isSel ? '#67E8F9' : '#94A3B8'} strokeWidth={1.7} style={{ display: 'block', margin: '0 auto 4px' }} />
+                            <p style={{ fontWeight: 700, color: isSel ? '#CFFAFE' : '#A1A1AA', fontSize: '0.72rem', margin: 0 }}>{label}</p>
+                          </button>
                         );
                       })}
                     </div>
@@ -824,125 +663,93 @@ export default function WatermarkPDF() {
                   {wmType === 'text' && (
                     <>
                       {/* PRESET STAMPS */}
-                      <div style={cardStyle}>
-                        <p style={sectionLabel}>Quick Stamps</p>
-                        <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
+                      <div style={darkCard}>
+                        <p style={sectionLabel}>Quick stamps</p>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                           {[
-                            { label: 'DRAFT',        color: '#1a3a8f', rotation: -45 },
-                            { label: 'CONFIDENTIAL', color: '#7a0f0f', rotation: -45 },
-                            { label: 'APPROVED',     color: '#15803D', rotation: -45 },
-                            { label: 'COPY',         color: '#1a1a1a', rotation: -45 },
-                            { label: 'VOID',         color: '#7a0f0f', rotation: -45 },
-                            { label: 'SAMPLE',       color: '#92400E', rotation: -45 },
-                          ].map((stamp) => (
-                            <div
-                              key={stamp.label}
-                              onClick={() => applyPreset(stamp)}
-                              style={{
-                                padding: '5px 12px', borderRadius: '10px', cursor: 'pointer',
-                                background: wmText === stamp.label ? '#A5F3FC' : 'rgba(255,255,255,0.55)',
-                                fontSize: '0.72rem', fontWeight: 800,
-                                color: stamp.color,
-                                border: `1.5px solid ${stamp.color}30`,
-                                boxShadow: wmText === stamp.label
-                                  ? '0 3px 0px rgba(14,116,144,0.3), 0 8px 18px rgba(6,182,212,0.22)'
-                                  : 'inset 0 2px 4px rgba(255,255,255,0.7)',
-                                transform: wmText === stamp.label ? 'translateY(-2px)' : 'none',
-                                transition: 'all 0.15s ease',
-                                letterSpacing: '0.04em',
-                              }}
-                            >
-                              {stamp.label}
-                            </div>
-                          ))}
+                            { label: 'DRAFT',        color: '#1a3a8f' },
+                            { label: 'CONFIDENTIAL', color: '#7a0f0f' },
+                            { label: 'APPROVED',     color: '#15803D' },
+                            { label: 'SAMPLE',       color: '#92400E' },
+                          ].map((stamp) => {
+                            const active = wmText === stamp.label;
+                            return (
+                              <button
+                                key={stamp.label}
+                                type="button"
+                                onClick={() => applyPreset(stamp)}
+                                style={{
+                                  padding: '6px 12px', borderRadius: 10, cursor: 'pointer', border: `1px solid ${active ? 'rgba(34,211,238,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                                  background: active ? 'rgba(34,211,238,0.12)' : 'rgba(255,255,255,0.04)',
+                                  fontSize: '0.7rem', fontWeight: 800, color: active ? '#E0F2FE' : stamp.color,
+                                  letterSpacing: '0.04em', transition: 'all 0.15s ease',
+                                }}
+                              >
+                                {stamp.label}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
 
                       {/* TEXT CONTENT + FONT SIZE */}
-                      <div style={cardStyle}>
-                        <p style={sectionLabel}>Watermark Text</p>
+                      <div style={darkCard}>
+                        <p style={sectionLabel}>Watermark text</p>
                         <input
                           type="text"
                           value={wmText}
                           onChange={(e) => setWmText(e.target.value)}
-                          placeholder="e.g. DRAFT, CONFIDENTIAL..."
+                          placeholder="DRAFT, CONFIDENTIAL…"
                           style={{
-                            width: '100%', padding: '10px 14px', borderRadius: '12px',
-                            border: 'none', fontWeight: 700, fontSize: '0.9rem',
-                            color: '#083344', background: 'rgba(255,255,255,0.85)',
-                            boxShadow: 'inset 0 2px 8px rgba(14,116,144,0.1)',
-                            outline: 'none', marginBottom: '12px', boxSizing: 'border-box',
+                            width: '100%', padding: '10px 12px', borderRadius: 8,
+                            border: '1px solid rgba(255,255,255,0.12)', fontWeight: 700, fontSize: '0.82rem',
+                            color: '#FAFAFA', background: 'rgba(255,255,255,0.05)',
+                            outline: 'none', marginBottom: 12, boxSizing: 'border-box',
                           }}
                         />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#155E75',
-                                         flexShrink: 0 }}>Size:</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94A3B8', flexShrink: 0 }}>Size</span>
                           <input type="range" min={20} max={120} value={fontSize}
                                  onChange={(e) => setFontSize(Number(e.target.value))}
-                                 style={{ flex: 1, accentColor: '#22D3EE' }} />
-                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#155E75',
-                                         minWidth: '32px', textAlign: 'right' }}>
+                                 style={{ flex: 1, accentColor: ACCENT }} />
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#A1A1AA', minWidth: 36, textAlign: 'right' }}>
                             {fontSize}pt
                           </span>
                         </div>
                       </div>
 
                       {/* COLOR + OPACITY */}
-                      <div style={cardStyle}>
-                        <p style={sectionLabel}>Color &amp; Opacity</p>
-                        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px',
-                                      flexWrap: 'wrap', alignItems: 'center' }}>
+                      <div style={darkCard}>
+                        <p style={sectionLabel}>Color &amp; opacity</p>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                           {['#1a1a1a', '#1a3a8f', '#7a0f0f', '#15803D', '#92400E', '#6D28D9'].map((col) => (
-                            <div key={col} onClick={() => setWmColor(col)} style={{
-                              width: '26px', height: '26px', borderRadius: '50%',
-                              background: col, cursor: 'pointer',
-                              boxShadow: wmColor === col
-                                ? `0 0 0 3px #CFFAFE, 0 0 0 5px ${col}`
-                                : '0 2px 6px rgba(0,0,0,0.25)',
-                              transform: wmColor === col ? 'scale(1.2)' : 'scale(1)',
-                              transition: 'all 0.15s ease',
-                            }} />
+                            <button
+                              key={col}
+                              type="button"
+                              aria-label={`Color ${col}`}
+                              onClick={() => setWmColor(col)}
+                              style={{
+                                width: 26, height: 26, borderRadius: '50%', background: col, cursor: 'pointer', border: 'none',
+                                boxShadow: wmColor === col ? `0 0 0 2px #fff, 0 0 0 4px ${col}` : '0 2px 6px rgba(0,0,0,0.4)',
+                                transform: wmColor === col ? 'scale(1.08)' : 'scale(1)', transition: 'all 0.15s ease',
+                              }}
+                            />
                           ))}
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px',
-                                          cursor: 'pointer' }}>
-                            <input type="color" value={wmColor}
-                                   onChange={(e) => setWmColor(e.target.value)}
-                                   style={{ width: '26px', height: '26px', borderRadius: '50%',
-                                            border: 'none', padding: 0, cursor: 'pointer' }} />
-                            <span style={{ fontSize: '0.68rem', color: '#155E75', fontWeight: 600 }}>
-                              Custom
-                            </span>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                            <input type="color" value={wmColor} onChange={(e) => setWmColor(e.target.value)}
+                                   style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', padding: 0, cursor: 'pointer', background: 'transparent' }} />
+                            <span style={{ fontSize: '0.68rem', color: '#94A3B8', fontWeight: 600 }}>Custom</span>
                           </label>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#155E75',
-                                         flexShrink: 0 }}>Opacity:</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94A3B8', flexShrink: 0 }}>Opacity</span>
                           <input type="range" min={5} max={100} value={Math.round(opacity * 100)}
                                  onChange={(e) => setOpacity(Number(e.target.value) / 100)}
-                                 style={{ flex: 1, accentColor: '#22D3EE' }} />
-                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#155E75',
-                                         minWidth: '38px', textAlign: 'right' }}>
+                                 style={{ flex: 1, accentColor: ACCENT }} />
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#A1A1AA', minWidth: 38, textAlign: 'right' }}>
                             {Math.round(opacity * 100)}%
                           </span>
                         </div>
-                      </div>
-
-                      {/* ROTATION + POSITION */}
-                      <div style={cardStyle}>
-                        <p style={sectionLabel}>Rotation &amp; Position</p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px',
-                                      marginBottom: '12px' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#155E75',
-                                         flexShrink: 0 }}>Rotate:</span>
-                          <input type="range" min={-90} max={90} value={rotation}
-                                 onChange={(e) => setRotation(Number(e.target.value))}
-                                 style={{ flex: 1, accentColor: '#22D3EE' }} />
-                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#155E75',
-                                         minWidth: '38px', textAlign: 'right' }}>
-                            {rotation}°
-                          </span>
-                        </div>
-                        <PositionGrid wmPosition={wmPosition} setWmPosition={setWmPosition} />
                       </div>
 
                     </>
@@ -950,68 +757,50 @@ export default function WatermarkPDF() {
 
                   {/* ── IMAGE WATERMARK SETTINGS ── */}
                   {wmType === 'image' && (
-                    <div style={cardStyle}>
-                      <p style={sectionLabel}>Watermark Image</p>
+                    <div style={darkCard}>
+                      <p style={sectionLabel}>Watermark image</p>
 
-                      <div
+                      <button
+                        type="button"
                         onClick={() => imgWmRef.current?.click()}
                         style={{
-                          borderRadius: '16px', padding: '20px', textAlign: 'center',
-                          background: 'rgba(255,255,255,0.6)',
-                          border: '2px dashed rgba(34,211,238,0.6)',
-                          cursor: 'pointer', marginBottom: '12px',
+                          width: '100%', borderRadius: 10, padding: 16, textAlign: 'center',
+                          background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.2)',
+                          cursor: 'pointer', marginBottom: 12,
                         }}
                       >
-                        {wmImagePreview
-                          ? <img src={wmImagePreview} alt="Watermark preview"
-                                 style={{ maxHeight: '60px', maxWidth: '100%', objectFit: 'contain' }} />
-                          : (
-                            <>
-                              <div style={{ fontSize: '1.8rem', marginBottom: '4px' }}>🖼️</div>
-                              <p style={{ fontWeight: 700, color: '#155E75', fontSize: '0.82rem',
-                                           margin: '0 0 2px' }}>
-                                Click to upload logo/image
-                              </p>
-                              <p style={{ color: '#0E7490', fontSize: '0.72rem', margin: 0 }}>
-                                PNG (transparent bg recommended), JPG
-                              </p>
-                            </>
-                          )
-                        }
-                      </div>
-                      <input ref={imgWmRef} type="file"
-                             accept="image/png,image/jpeg,image/webp"
-                             style={{ display: 'none' }}
-                             onChange={handleWmImageUpload} />
+                        {wmImagePreview ? (
+                          <img src={wmImagePreview} alt="" style={{ maxHeight: 48, maxWidth: '100%', objectFit: 'contain' }} />
+                        ) : (
+                          <>
+                            <ImageIcon size={26} color="#71717A" style={{ display: 'block', margin: '0 auto 6px' }} />
+                            <p style={{ fontWeight: 600, color: '#E4E4E7', fontSize: '0.76rem', margin: '0 0 3px' }}>Upload image</p>
+                            <p style={{ color: '#71717A', fontSize: '0.68rem', margin: 0 }}>PNG, JPG, WebP</p>
+                          </>
+                        )}
+                      </button>
+                      <input ref={imgWmRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={handleWmImageUpload} />
 
                       {wmImagePreview && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#155E75',
-                                           flexShrink: 0, minWidth: '50px' }}>Scale:</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94A3B8', flexShrink: 0, minWidth: 44 }}>Scale</span>
                             <input type="range" min={5} max={80} value={imgScalePercent}
                                    onChange={(e) => setImgScalePercent(Number(e.target.value))}
-                                   style={{ flex: 1, accentColor: '#22D3EE' }} />
-                            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#155E75',
-                                           minWidth: '38px', textAlign: 'right' }}>
+                                   style={{ flex: 1, accentColor: ACCENT }} />
+                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#A1A1AA', minWidth: 38, textAlign: 'right' }}>
                               {imgScalePercent}%
                             </span>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#155E75',
-                                           flexShrink: 0, minWidth: '50px' }}>Opacity:</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94A3B8', flexShrink: 0, minWidth: 44 }}>Opacity</span>
                             <input type="range" min={5} max={100} value={Math.round(opacity * 100)}
                                    onChange={(e) => setOpacity(Number(e.target.value) / 100)}
-                                   style={{ flex: 1, accentColor: '#22D3EE' }} />
-                            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#155E75',
-                                           minWidth: '38px', textAlign: 'right' }}>
+                                   style={{ flex: 1, accentColor: ACCENT }} />
+                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#A1A1AA', minWidth: 38, textAlign: 'right' }}>
                               {Math.round(opacity * 100)}%
                             </span>
                           </div>
-                          <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#155E75', margin: 0 }}>
-                            Position:
-                          </p>
-                          <PositionGrid wmPosition={wmPosition} setWmPosition={setWmPosition} />
                         </div>
                       )}
                     </div>
@@ -1019,249 +808,185 @@ export default function WatermarkPDF() {
 
                 </div>
 
-                {/* ══ RIGHT COLUMN — LIVE PREVIEW ══ */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{
-                    borderRadius: '24px', padding: '16px',
-                    background: '#CFFAFE',
-                    boxShadow: '0 7px 0px rgba(14,116,144,0.4), 0 20px 55px rgba(6,182,212,0.32), inset 0 -10px 22px rgba(6,182,212,0.26), inset 0 10px 22px rgba(255,255,255,0.9)',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center',
-                                  justifyContent: 'space-between', marginBottom: '12px' }}>
-                      <p style={{ fontWeight: 700, color: '#083344', fontSize: '0.82rem', margin: 0 }}>
-                        👁️ Live Preview — Page 1
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: LAYOUT_GAP,
+                    minWidth: 0,
+                    ...(workspaceColHeight != null
+                      ? {
+                          minHeight: workspaceColHeight,
+                          maxHeight: workspaceColHeight,
+                          overflowY: 'auto',
+                          overflowX: 'hidden',
+                          WebkitOverflowScrolling: 'touch',
+                        }
+                      : {}),
+                  }}
+                >
+                  <div style={darkCard}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <p style={{ fontWeight: 700, color: '#E4E4E7', fontSize: '0.76rem', margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Eye size={14} color={ACCENT} /> Preview · page 1
                       </p>
                       {isUpdatingPreview && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px',
-                                      fontSize: '0.72rem', color: '#0E7490', fontWeight: 600 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>
                           <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                          Updating...
+                          …
                         </div>
                       )}
                     </div>
 
                     <div style={{
-                      borderRadius: '12px', overflow: 'hidden',
-                      background: 'white',
-                      boxShadow: '0 4px 0px rgba(14,116,144,0.2), 0 12px 28px rgba(6,182,212,0.16)',
-                      position: 'relative', minHeight: pageRendered ? 0 : '180px',
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      background: '#fff',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      position: 'relative',
+                      minHeight: pageRendered ? 0 : 144,
                     }}>
-                      <canvas
-                        ref={previewCanvasRef}
-                        style={{ width: '100%', display: 'block' }}
-                      />
+                      <canvas ref={previewCanvasRef} style={{ width: '100%', height: 'auto', display: 'block' }} />
                       {!pageRendered && (
                         <div style={{
-                          position: 'absolute', inset: 0,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: '#0E7490', flexDirection: 'column', gap: '8px',
+                          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexDirection: 'column', gap: 8, background: 'rgba(0,0,0,0.25)',
                         }}>
-                          <div style={{ fontSize: '2rem' }}>👁️</div>
-                          <p style={{ fontSize: '0.78rem', fontWeight: 600, margin: 0 }}>
-                            Loading preview...
-                          </p>
+                          <Loader2 size={22} color={ACCENT} style={{ animation: 'spin 1s linear infinite' }} />
+                          <p style={{ fontSize: '0.72rem', fontWeight: 600, margin: 0, color: '#E4E4E7' }}>Loading…</p>
                         </div>
                       )}
                     </div>
-
-                    <p style={{ color: '#155E75', fontSize: '0.7rem', margin: '8px 0 0',
-                                textAlign: 'center', fontWeight: 500 }}>
-                      Preview updates live as you adjust settings
-                    </p>
                   </div>
 
-                  {/* ── PAGE SCOPE ── */}
-                  <div style={cardStyle}>
-                    <p style={sectionLabel}>Apply To Pages</p>
-
-                    {/* 2×3 chip grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: pageScope === 'custom' ? '10px' : 0 }}>
+                  <div style={darkCard}>
+                    <p style={sectionLabel}>Pages</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: pageScope === 'custom' ? 10 : 0 }}>
                       {[
-                        { id: 'all',    label: 'All',   emoji: '📄' },
-                        { id: 'odd',    label: 'Odd',   emoji: '🔢' },
-                        { id: 'even',   label: 'Even',  emoji: '🔣' },
-                        { id: 'first',  label: 'First', emoji: '1️⃣' },
-                        { id: 'last',   label: 'Last',  emoji: '🔚' },
-                        { id: 'custom', label: 'Range', emoji: '✂️' },
-                      ].map((scope) => {
-                        const isSel = pageScope === scope.id;
+                        { id: 'all', label: 'All' },
+                        { id: 'odd', label: 'Odd' },
+                        { id: 'even', label: 'Even' },
+                        { id: 'first', label: 'First' },
+                        { id: 'last', label: 'Last' },
+                        { id: 'custom', label: 'Range' },
+                      ].map(({ id, label }) => {
+                        const isSel = pageScope === id;
                         return (
-                          <div key={scope.id} onClick={() => setPageScope(scope.id)} style={{
-                            borderRadius: '12px', padding: '8px 6px', cursor: 'pointer',
-                            background: isSel ? '#A5F3FC' : 'rgba(255,255,255,0.5)',
-                            boxShadow: isSel
-                              ? '0 4px 0px rgba(14,116,144,0.38), 0 10px 24px rgba(6,182,212,0.28), inset 0 -5px 12px rgba(6,182,212,0.2), inset 0 5px 12px rgba(255,255,255,0.9)'
-                              : '0 2px 0px rgba(14,116,144,0.1), inset 0 2px 5px rgba(255,255,255,0.6)',
-                            transform: isSel ? 'translateY(-2px)' : 'none',
-                            transition: 'all 0.18s cubic-bezier(0.34,1.2,0.64,1)',
-                            display: 'flex', flexDirection: 'column',
-                            alignItems: 'center', gap: '3px',
-                            position: 'relative',
-                          }}>
-                            <span style={{ fontSize: '0.9rem' }}>{scope.emoji}</span>
-                            <p style={{ fontWeight: 700, color: '#083344', fontSize: '0.68rem', margin: 0 }}>
-                              {scope.label}
-                            </p>
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => setPageScope(id)}
+                            style={{
+                              borderRadius: 10, padding: '10px 8px', cursor: 'pointer', position: 'relative',
+                              background: isSel ? 'rgba(34,211,238,0.15)' : 'rgba(255,255,255,0.04)',
+                              border: `1px solid ${isSel ? 'rgba(34,211,238,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                              transition: 'all 0.18s ease',
+                            }}
+                          >
                             {isSel && (
-                              <div style={{
-                                position: 'absolute', top: '-4px', right: '-4px',
-                                width: '13px', height: '13px', borderRadius: '50%',
-                                background: '#0E7490', color: 'white',
-                                fontSize: '0.45rem', fontWeight: 900,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              }}>✓</div>
+                              <span style={{ position: 'absolute', top: 4, right: 4, lineHeight: 0 }}>
+                                <Check size={12} color={ACCENT} strokeWidth={3} />
+                              </span>
                             )}
-                          </div>
+                            <span style={{ fontWeight: 700, color: isSel ? '#CFFAFE' : '#A1A1AA', fontSize: '0.72rem' }}>{label}</span>
+                          </button>
                         );
                       })}
                     </div>
-
-                    {/* Custom range inputs */}
                     {pageScope === 'custom' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#155E75' }}>From</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94A3B8' }}>From</label>
                         <input
-                          type="number" min={1} max={pageCount} value={customFrom}
+                          type="number"
+                          min={1}
+                          max={pageCount}
+                          value={customFrom}
                           onChange={(e) => {
-                            const v = Math.max(1, Math.min(parseInt(e.target.value) || 1, customTo));
+                            const v = Math.max(1, Math.min(parseInt(e.target.value, 10) || 1, customTo));
                             setCustomFrom(v);
                           }}
                           style={{
-                            width: '50px', padding: '6px 8px', borderRadius: '10px',
-                            border: 'none', fontWeight: 700, textAlign: 'center', fontSize: '0.82rem',
-                            background: 'rgba(255,255,255,0.85)', color: '#083344',
-                            boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.07)', outline: 'none',
+                            width: 52, padding: '8px 10px', borderRadius: 8,
+                            border: '1px solid rgba(255,255,255,0.12)', fontWeight: 700, textAlign: 'center', fontSize: '0.82rem',
+                            background: 'rgba(255,255,255,0.05)', color: '#FAFAFA', outline: 'none', boxSizing: 'border-box',
                           }}
                         />
-                        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#155E75' }}>To</label>
+                        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94A3B8' }}>To</label>
                         <input
-                          type="number" min={customFrom} max={pageCount} value={customTo}
+                          type="number"
+                          min={customFrom}
+                          max={pageCount}
+                          value={customTo}
                           onChange={(e) => {
-                            const v = Math.max(customFrom, Math.min(parseInt(e.target.value) || customFrom, pageCount));
+                            const v = Math.max(customFrom, Math.min(parseInt(e.target.value, 10) || customFrom, pageCount));
                             setCustomTo(v);
                           }}
                           style={{
-                            width: '50px', padding: '6px 8px', borderRadius: '10px',
-                            border: 'none', fontWeight: 700, textAlign: 'center', fontSize: '0.82rem',
-                            background: 'rgba(255,255,255,0.85)', color: '#083344',
-                            boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.07)', outline: 'none',
+                            width: 52, padding: '8px 10px', borderRadius: 8,
+                            border: '1px solid rgba(255,255,255,0.12)', fontWeight: 700, textAlign: 'center', fontSize: '0.82rem',
+                            background: 'rgba(255,255,255,0.05)', color: '#FAFAFA', outline: 'none', boxSizing: 'border-box',
                           }}
                         />
-                        <span style={{ fontSize: '0.7rem', color: '#0E7490', fontWeight: 600 }}>
-                          = {customTo - customFrom + 1}p
-                        </span>
                       </div>
                     )}
-
-                    {/* Summary line */}
-                    <p style={{ fontSize: '0.68rem', color: '#0E7490', fontWeight: 600,
-                                margin: '8px 0 0', textAlign: 'center' }}>
-                      Stamping <strong>{getTargetPageCount()}</strong> of {pageCount} page{pageCount !== 1 ? 's' : ''}
-                    </p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* ─── SECTION 5: APPLY ACTION BAR ─────────────── */}
             {pdfFile && (
-              <div style={{
-                position: 'sticky', bottom: '20px', zIndex: 40,
-                borderRadius: '24px', padding: '16px 20px',
-                background: 'linear-gradient(135deg, #ECFEFF, #CFFAFE)',
-                boxShadow: '0 8px 0px rgba(14,116,144,0.3), 0 24px 65px rgba(6,182,212,0.32), inset 0 -10px 24px rgba(6,182,212,0.2), inset 0 10px 24px rgba(255,255,255,0.95)',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px',
-                marginTop: '32px', marginBottom: '40px', overflow: 'visible', flexWrap: 'wrap',
-              }}>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <div style={statPill}>
-                    {wmType === 'text' ? `"${wmText || '…'}"` : '🖼️ Image'}
-                  </div>
-                  <div style={statPill}>{Math.round(opacity * 100)}% opacity</div>
-                  <div style={statPill}>📄 {getTargetPageCount()} page{getTargetPageCount() !== 1 ? 's' : ''}</div>
-                </div>
-
-                <button
+              <div style={{ marginTop: WORKSPACE_ABOVE_ACTION, textAlign: 'center' }}>
+                <MotionButton
+                  type="button"
                   onClick={handleApplyWatermark}
                   disabled={processing || !isReadyToApply()}
-                  style={{
-                    padding: '12px 28px', borderRadius: '16px', border: 'none',
-                    background: (!isReadyToApply() || processing)
-                      ? 'linear-gradient(160deg, #94A3B8, #64748B)'
-                      : 'linear-gradient(160deg, #22D3EE, #0E7490)',
-                    color: 'white', fontWeight: 800, fontSize: '0.95rem',
-                    cursor: (!isReadyToApply() || processing) ? 'not-allowed' : 'pointer',
-                    whiteSpace: 'nowrap',
-                    boxShadow: (!isReadyToApply() || processing) ? 'none'
-                      : '0 5px 0px rgba(14,116,144,0.55), 0 14px 36px rgba(6,182,212,0.45), inset 0 -5px 12px rgba(14,116,144,0.35), inset 0 5px 12px rgba(207,250,254,0.4)',
-                    transition: 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                  }}
-                  onMouseEnter={e => { if (isReadyToApply() && !processing) e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; }}
-                >
-                  {processing
-                    ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Applying... {progress}%</>
-                    : <>💧 Apply Watermark</>
-                  }
-                </button>
+                  loading={processing}
+                  label={processing ? `Applying… ${progress}%` : 'Apply watermark'}
+                  style={{ width: 'max-content', maxWidth: '100%', minWidth: 160 }}
+                />
               </div>
             )}
           </>
         )}
 
-        {/* ─── SECTION 6: PROCESSING OVERLAY ──────────────── */}
-        {processing && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 50,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.75)',
+          backdropFilter: processing ? 'blur(8px)' : 'none',
+          opacity: processing ? 1 : 0,
+          pointerEvents: processing ? 'auto' : 'none',
+          transition: 'opacity 0.18s ease',
+          padding: 20,
+        }}>
           <div style={{
-            position: 'fixed', inset: 0, zIndex: 50,
-            background: 'rgba(8,51,68,0.78)',
-            backdropFilter: 'blur(10px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+            borderRadius: 16, padding: '32px 26px', textAlign: 'center',
+            width: '100%', maxWidth: 288, margin: '0 13px',
+            background: '#14151a',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
           }}>
             <div style={{
-              borderRadius: '36px', padding: '40px 36px', textAlign: 'center',
-              maxWidth: '340px', width: '100%',
-              background: 'linear-gradient(145deg, #ECFEFF, #CFFAFE)',
-              boxShadow: '0 12px 0px rgba(14,116,144,0.45), 0 36px 90px rgba(6,182,212,0.5), inset 0 -14px 32px rgba(6,182,212,0.28), inset 0 14px 32px rgba(255,255,255,0.95)',
+              width: 52, height: 52, borderRadius: 14, margin: '0 auto 12px',
+              background: 'rgba(34,211,238,0.12)', border: `1px solid ${ACCENT}33`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <div style={{
-                width: '72px', height: '72px', borderRadius: '22px', margin: '0 auto 20px',
-                background: '#CFFAFE', fontSize: '2rem',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 6px 0px rgba(14,116,144,0.38), 0 16px 40px rgba(6,182,212,0.32), inset 0 -6px 14px rgba(6,182,212,0.25), inset 0 6px 14px rgba(255,255,255,0.95)',
-                animation: 'pulse 1.5s ease-in-out infinite',
-              }}>💧</div>
-
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#083344', margin: '0 0 6px' }}>
-                Applying Watermark
-              </h3>
-              <p style={{ color: '#0E7490', fontSize: '0.85rem', margin: '0 0 6px', lineHeight: 1.5 }}>
-                Stamping page {currentPage} of {getTargetPageCount()}
-              </p>
-              <p style={{ color: '#155E75', fontSize: '0.75rem', margin: '0 0 20px' }}>
-                Processing locally — your files never leave this device
-              </p>
-
-              <div style={{
-                width: '100%', height: '10px', borderRadius: '999px',
-                background: 'rgba(14,116,144,0.15)',
-                boxShadow: 'inset 0 2px 6px rgba(14,116,144,0.2)',
-                overflow: 'hidden', marginBottom: '8px',
-              }}>
-                <div style={{
-                  height: '100%', borderRadius: '999px',
-                  background: 'linear-gradient(90deg, #22D3EE, #0E7490)',
-                  width: `${progress}%`,
-                  transition: 'width 0.4s ease',
-                  boxShadow: '0 0 10px rgba(34,211,238,0.6)',
-                }} />
-              </div>
-              <p style={{ fontSize: '0.85rem', color: '#0E7490', fontWeight: 700, margin: 0 }}>
-                {progress}%
-              </p>
+              <Droplets size={22} color={ACCENT} style={{ animation: 'pulse 1.5s ease-in-out infinite' }} />
             </div>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'white', marginBottom: 6 }}>Applying watermark</h3>
+            <p style={{ color: '#A1A1AA', fontSize: '0.78rem', marginBottom: 16 }}>
+              Page {Math.max(1, currentPage)} of {getTargetPageCount() || 1}
+            </p>
+            <div style={{ height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: 10 }}>
+              <div style={{
+                height: '100%', width: `${progress}%`, borderRadius: 999,
+                background: `linear-gradient(90deg, ${ACCENT}, #0891b2)`,
+                transition: 'width 0.35s ease',
+              }} />
+            </div>
+            <p style={{ fontSize: '0.85rem', color: ACCENT, fontWeight: 600, margin: 0 }}>{progress}%</p>
           </div>
-        )}
+        </div>
 
       </div>
     </div>
