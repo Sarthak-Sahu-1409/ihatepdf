@@ -1,28 +1,43 @@
 import { useRef, useState, useEffect } from 'react';
 
-export default function SignaturePad({ onSignatureComplete }) {
+// Input: penColor (stroke), onSignatureComplete, optional showClearButton.
+// Renders a canvas signature pad; stroke color follows penColor for every new stroke.
+
+export default function SignaturePad({
+  penColor = '#0A0A0A',
+  onSignatureComplete,
+  showClearButton = true,
+}) {
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    ctx.strokeStyle = '#000';
+    ctx.strokeStyle = penColor;
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
-  }, []);
+    ctx.lineJoin = 'round';
+  }, [penColor]);
+
+  const pointerPos = (e, rect) => {
+    const t = e.touches?.[0];
+    const x = t ? t.clientX : e.clientX;
+    const y = t ? t.clientY : e.clientY;
+    return { x: x - rect.left, y: y - rect.top };
+  };
 
   const startDrawing = (e) => {
     setIsDrawing(true);
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext('2d');
+    const { x, y } = pointerPos(e, rect);
+    ctx.strokeStyle = penColor;
     ctx.beginPath();
-    ctx.moveTo(
-      e.clientX - rect.left || e.touches[0].clientX - rect.left,
-      e.clientY - rect.top || e.touches[0].clientY - rect.top
-    );
+    ctx.moveTo(x, y);
   };
 
   const draw = (e) => {
@@ -30,11 +45,12 @@ export default function SignaturePad({ onSignatureComplete }) {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext('2d');
-    ctx.lineTo(
-      e.clientX - rect.left || e.touches[0].clientX - rect.left,
-      e.clientY - rect.top || e.touches[0].clientY - rect.top
-    );
+    const { x, y } = pointerPos(e, rect);
+    ctx.strokeStyle = penColor;
+    ctx.lineTo(x, y);
     ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, y);
     setHasSignature(true);
   };
 
@@ -70,12 +86,15 @@ export default function SignaturePad({ onSignatureComplete }) {
         className="border-2 border-gray-300 rounded-lg cursor-crosshair w-full"
         style={{ touchAction: 'none' }}
       />
-      <button
-        onClick={clear}
-        className="mt-2 text-sm text-gray-600 hover:text-primary"
-      >
-        Clear Signature
-      </button>
+      {showClearButton && (
+        <button
+          type="button"
+          onClick={clear}
+          className="mt-2 text-sm text-gray-600 hover:text-primary"
+        >
+          Clear Signature
+        </button>
+      )}
     </div>
   );
 }

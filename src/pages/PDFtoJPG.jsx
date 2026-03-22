@@ -351,7 +351,7 @@ export default function PDFtoJPG() {
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDownloadSingle(img); }}
                       style={{
-                        width: 30, height: 30, borderRadius: 8, border: 'none',
+                        width: 30, height: 30, borderRadius: 8,
                         background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.2)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         cursor: 'pointer', color: '#60A5FA', transition: 'all 0.18s ease', flexShrink: 0,
