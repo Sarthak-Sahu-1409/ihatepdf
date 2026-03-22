@@ -24,8 +24,10 @@ const FILL_PRIMARY = '#e4e4e7';   // zinc-200 — light disc, readable arrow on 
 const FILL_SECONDARY = '#8b5cf6'; // violet-500
 
 /** Inner padding (px). Fill layer and collapsed disc align to these insets. */
-const PAD_X = 10;
+const PAD_X = 12;
 const PAD_Y = 8;
+/** Space between arrow disc and label (fixed so hover does not reflow text). */
+const ICON_LABEL_GAP = 10;
 
 // Input: MotionButtonProps + standard button attrs. Output: pill with sliding fill and icon.
 // forwardRef so callers (e.g. form libs) can get a ref to the underlying <button>.
@@ -61,7 +63,8 @@ export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
       display: 'inline-flex',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
+      justifyContent: 'flex-start',
+      gap: ICON_LABEL_GAP,
       minHeight: PAD_Y * 2 + 46,
       minWidth: 220,
       borderRadius: 9999,
@@ -82,12 +85,14 @@ export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
       position: 'absolute',
       top: PAD_Y,
       left: PAD_X,
-      height: `calc(100% - ${PAD_Y * 2}px)`,
+      height: 46,
       width: isExpanded ? `calc(100% - ${PAD_X * 2}px)` : 46,
       borderRadius: 9999,
       background: fillColor,
       transition: 'width 0.45s cubic-bezier(0.4, 0, 0.2, 1)',
       zIndex: 0,
+      /* Keeps the growing pill vertically locked to the icon row (no optical drift). */
+      pointerEvents: 'none',
     };
 
     const iconWrapStyle: CSSProperties = {
@@ -100,22 +105,28 @@ export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
       height: 46,
       flexShrink: 0,
       color: arrowColor,
-      transition: 'transform 0.3s ease',
-      transform: isExpanded ? 'translateX(2px)' : 'translateX(0)',
     };
 
     const labelStyle: CSSProperties = {
       position: 'relative',
       zIndex: 1,
       flex: '0 1 auto',
+      display: 'flex',
+      alignItems: 'center',
+      alignSelf: 'center',
+      minHeight: 46,
       textAlign: 'left',
       fontSize: '1rem',
       fontWeight: 600,
       letterSpacing: '-0.015em',
       whiteSpace: 'nowrap',
       color: isExpanded ? labelHoverColor : labelIdleColor,
-      transition: 'color 0.3s ease',
+      transition: 'color 0.25s ease',
       userSelect: 'none',
+      /* Same padding in all states — avoids text sliding on hover. */
+      paddingRight: 14,
+      paddingLeft: 0,
+      boxSizing: 'border-box',
     };
 
     return (
