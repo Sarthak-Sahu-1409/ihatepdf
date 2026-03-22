@@ -1,8 +1,11 @@
 import { useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Upload, X, ArrowLeft, Plus, Trash2, Download, GripVertical, Loader2 } from 'lucide-react';
+import { Upload, X, ArrowLeft, Plus, Trash2, Download, GripVertical, Zap } from 'lucide-react';
+import { HeroDitheringCard } from '../components/ui/hero-dithering-card';
 import { UploadCard } from '../components/ui/upload-ui';
 import { DownloadButton } from '../components/ui/download-animation';
+import MotionButton from '../components/ui/motion-button';
+import { saveBlobToDisk } from '../utils/saveBlobToDisk';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 /* ────────────────────────────────────────────────────────────────
@@ -14,34 +17,10 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/* Card accent colours — cycle through these */
-const cardColors = [
-  {
-    bg: '#BFDBFE',
-    accent: '#3B82F6',
-    shadow: '0 8px 0px rgba(29,78,216,0.45), 0 24px 70px rgba(29,100,230,0.38), inset 0 -10px 24px rgba(37,99,235,0.3), inset 0 10px 24px rgba(255,255,255,0.92)',
-  },
-  {
-    bg: '#DDD6FE',
-    accent: '#8B5CF6',
-    shadow: '0 8px 0px rgba(109,40,217,0.45), 0 24px 70px rgba(124,58,237,0.38), inset 0 -10px 24px rgba(124,58,237,0.3), inset 0 10px 24px rgba(255,255,255,0.92)',
-  },
-  {
-    bg: '#BBF7D0',
-    accent: '#22C55E',
-    shadow: '0 8px 0px rgba(21,128,61,0.45), 0 24px 70px rgba(22,163,74,0.38), inset 0 -10px 24px rgba(22,163,74,0.3), inset 0 10px 24px rgba(255,255,255,0.92)',
-  },
-  {
-    bg: '#FECACA',
-    accent: '#EF4444',
-    shadow: '0 8px 0px rgba(185,28,28,0.4), 0 24px 70px rgba(220,38,38,0.35), inset 0 -10px 24px rgba(220,38,38,0.28), inset 0 10px 24px rgba(255,255,255,0.92)',
-  },
-  {
-    bg: '#FDE68A',
-    accent: '#F59E0B',
-    shadow: '0 8px 0px rgba(161,98,7,0.45), 0 24px 70px rgba(202,138,4,0.38), inset 0 -10px 24px rgba(202,138,4,0.3), inset 0 10px 24px rgba(255,255,255,0.92)',
-  },
-];
+/* ────────────────────────────────────────────────────────────────
+   Card styles (Dark theme) 
+   ──────────────────────────────────────────────────────────────── */
+
 
 /* ════════════════════════════════════════════════════════════════
    MERGE PDF PAGE
@@ -339,14 +318,9 @@ export default function MergePDF() {
   };
 
   /* ── download ───────────────────────────────────────────── */
-  const handleDownload = () => {
-    if (!mergedPdfBlob) return;
-    const url = URL.createObjectURL(mergedPdfBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `merged-${Date.now()}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleDownload = async () => {
+    if (!mergedPdfBlob) return false;
+    return saveBlobToDisk(mergedPdfBlob, `merged-${Date.now()}.pdf`);
   };
 
   /* ── reset ──────────────────────────────────────────────── */
@@ -400,23 +374,24 @@ export default function MergePDF() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
-              padding: '12px 24px',
+              padding: '10px 20px',
               borderRadius: 20,
-              background: 'rgba(255,255,255,0.92)',
-              fontWeight: 700,
-              color: '#3730A3',
+              background: 'rgba(255,255,255,0.06)',
+              fontWeight: 600,
+              color: '#E4E4E7',
               textDecoration: 'none',
-              boxShadow:
-                '0 6px 0px rgba(55,48,163,0.25), 0 16px 40px rgba(60,100,220,0.22), inset 0 -5px 12px rgba(100,130,220,0.18), inset 0 5px 12px rgba(255,255,255,0.98)',
-              transition: 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              transition: 'all 0.2s ease',
               marginBottom: 24,
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.transform = 'translateY(-4px)')
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.transform = 'translateY(0px)')
-            }
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+              e.currentTarget.style.color = '#fff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+              e.currentTarget.style.color = '#E4E4E7';
+            }}
           >
             <ArrowLeft size={18} /> Back to Home
           </Link>
@@ -424,11 +399,10 @@ export default function MergePDF() {
           <h1
             style={{
               fontSize: 'clamp(2rem, 5vw, 3rem)',
-              fontWeight: 900,
+              fontWeight: 800,
               color: 'white',
               marginBottom: 10,
               lineHeight: 1.1,
-              textShadow: '0 4px 20px rgba(0,0,0,0.2)',
               letterSpacing: '-0.02em',
             }}
           >
@@ -479,12 +453,11 @@ export default function MergePDF() {
                     fontWeight: 700,
                     color: 'white',
                     marginBottom: 2,
-                    textShadow: '0 2px 10px rgba(0,0,0,0.15)',
                   }}
                 >
                   Your PDFs ({pdfFiles.length} added)
                 </h2>
-                <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>
+                <p style={{ fontSize: '0.8rem', color: '#A1A1AA' }}>
                   Drag to reorder • Select pages to include from each PDF
                 </p>
               </div>
@@ -493,26 +466,25 @@ export default function MergePDF() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
-                  padding: '10px 18px',
+                  padding: '8px 16px',
                   borderRadius: 20,
-                  background: 'rgba(255,255,255,0.92)',
-                  fontWeight: 700,
+                  background: 'rgba(255,255,255,0.06)',
+                  fontWeight: 600,
                   fontSize: '0.8rem',
-                  color: '#3730A3',
-                  border: 'none',
+                  color: '#E4E4E7',
+                  border: '1px solid rgba(255,255,255,0.08)',
                   cursor: 'pointer',
-                  boxShadow:
-                    '0 5px 0px rgba(55,48,163,0.2), 0 12px 30px rgba(60,100,220,0.18), inset 0 -4px 10px rgba(100,130,220,0.15), inset 0 4px 10px rgba(255,255,255,0.98)',
-                  transition:
-                    'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+                  transition: 'all 0.2s ease',
                 }}
                 onClick={() => addMoreInputRef.current?.click()}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.transform = 'translateY(-3px)')
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.transform = 'translateY(0)')
-                }
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                  e.currentTarget.style.color = '#E4E4E7';
+                }}
               >
                 <Plus size={16} /> Add More
               </button>
@@ -532,7 +504,6 @@ export default function MergePDF() {
             {/* file card list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {pdfFiles.map((pdf, idx) => {
-                const color = cardColors[idx % cardColors.length];
                 return (
                   <div
                     key={pdf.id}
@@ -542,24 +513,29 @@ export default function MergePDF() {
                     onDrop={() => handleCardDrop(idx)}
                     onDragEnd={handleDragEnd}
                     style={{
-                      borderRadius: 28,
-                      padding: '20px 24px',
-                      background: color.bg,
-                      boxShadow: color.shadow,
-                      borderLeft: `5px solid ${color.accent}`,
+                      borderRadius: 14,
+                      padding: '24px',
+                      backgroundColor: '#1C1D21',
+                      backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      boxShadow: '0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
                       opacity: dragIndex === idx ? 0.4 : 1,
-                      transform:
-                        dragIndex === idx ? 'scale(0.98)' : 'scale(1)',
-                      transition:
-                        'transform 0.25s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s ease',
-                      outline:
-                        dropTarget === idx && dragIndex !== idx
-                          ? '2px dashed #60A5FA'
-                          : 'none',
+                      transform: dragIndex === idx ? 'scale(0.98)' : 'scale(1)',
+                      transition: 'transform 0.25s ease, opacity 0.2s ease',
+                      outline: dropTarget === idx && dragIndex !== idx ? '2px dashed #818CF8' : 'none',
                       outlineOffset: dropTarget === idx ? -2 : 0,
                       overflow: 'visible',
+                      position: 'relative'
                     }}
                   >
+                    {/* Subtle top right glow */}
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'radial-gradient(circle at 100% 0%, rgba(99,102,241,0.1) 0%, transparent 65%)',
+                      pointerEvents: 'none',
+                      borderRadius: 14
+                    }} />
                     {/* top row — thumbnail + info + controls */}
                     <div
                       style={{
@@ -590,14 +566,13 @@ export default function MergePDF() {
                             width: 56,
                             height: 72,
                             borderRadius: 10,
-                            background: '#E2E8F0',
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px solid rgba(255,255,255,0.08)',
                             flexShrink: 0,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontSize: '1.5rem',
-                            boxShadow:
-                              '0 4px 0px rgba(0,0,0,0.08), 0 8px 20px rgba(0,0,0,0.06)',
                           }}
                         >
                           📄
@@ -605,11 +580,11 @@ export default function MergePDF() {
                       )}
 
                       {/* file info */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 10 }}>
                         <p
                           style={{
                             fontWeight: 700,
-                            color: '#1e293b',
+                            color: 'white',
                             fontSize: '0.95rem',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
@@ -621,7 +596,7 @@ export default function MergePDF() {
                         <p
                           style={{
                             fontSize: '0.78rem',
-                            color: '#64748b',
+                            color: '#A1A1AA',
                             marginTop: 2,
                           }}
                         >
@@ -637,12 +612,11 @@ export default function MergePDF() {
                             marginTop: 6,
                             padding: '3px 10px',
                             borderRadius: 999,
-                            background: 'rgba(255,255,255,0.75)',
+                            background: 'rgba(255,255,255,0.06)',
+                            border: '1px solid rgba(255,255,255,0.08)',
                             fontSize: '0.7rem',
                             fontWeight: 600,
-                            color: '#475569',
-                            boxShadow:
-                              'inset 0 -2px 6px rgba(0,0,0,0.06), inset 0 2px 6px rgba(255,255,255,0.8)',
+                            color: '#E4E4E7',
                           }}
                         >
                           File {idx + 1} of {pdfFiles.length}
@@ -675,8 +649,10 @@ export default function MergePDF() {
                         <div
                           style={{
                             cursor: 'grab',
-                            color: '#94a3b8',
+                            color: '#52525B',
                             padding: 4,
+                            position: 'relative',
+                            zIndex: 10
                           }}
                           title="Drag to reorder"
                         >
@@ -685,28 +661,29 @@ export default function MergePDF() {
                         <button
                           onClick={() => removeFile(pdf.id)}
                           style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 12,
-                            background: 'rgba(255,255,255,0.85)',
-                            border: 'none',
+                            width: 32,
+                            height: 32,
+                            borderRadius: 8,
+                            background: 'transparent',
+                            border: '1px solid rgba(239,68,68,0.2)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
-                            color: '#ef4444',
-                            boxShadow:
-                              '0 3px 0px rgba(0,0,0,0.1), inset 0 -2px 6px rgba(0,0,0,0.06), inset 0 2px 6px rgba(255,255,255,0.9)',
-                            transition:
-                              'transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',
+                            color: '#EF4444',
+                            transition: 'all 0.2s ease',
+                            position: 'relative',
+                            zIndex: 10
                           }}
                           title="Remove file"
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.transform = 'scale(1.1)')
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.transform = 'scale(1)')
-                          }
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
+                            e.currentTarget.style.color = '#F87171';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = '#EF4444';
+                          }}
                         >
                           <Trash2 size={16} />
                         </button>
@@ -742,7 +719,7 @@ export default function MergePDF() {
                             style={{
                               fontSize: '0.7rem',
                               fontWeight: 700,
-                              color: '#64748b',
+                              color: '#A1A1AA',
                               textTransform: 'uppercase',
                               letterSpacing: '0.06em',
                             }}
@@ -757,7 +734,7 @@ export default function MergePDF() {
                             }}
                           >
                             <span
-                              style={{ fontSize: '0.72rem', color: '#94a3b8' }}
+                              style={{ fontSize: '0.72rem', color: '#A1A1AA' }}
                             >
                               {pdf.selectedPages.size} of {pdf.pageCount}{' '}
                               selected
@@ -766,7 +743,7 @@ export default function MergePDF() {
                               onClick={() => toggleAllPages(pdf.id)}
                               style={{
                                 fontSize: '0.72rem',
-                                color: '#3b82f6',
+                                color: '#818CF8',
                                 fontWeight: 600,
                                 background: 'none',
                                 border: 'none',
@@ -806,10 +783,10 @@ export default function MergePDF() {
                                   height: 60,
                                   borderRadius: 12,
                                   border: selected
-                                    ? '2px solid #60A5FA'
-                                    : '2px solid #e2e8f0',
-                                  background: selected ? '#EFF6FF' : '#fff',
-                                  opacity: selected ? 1 : 0.5,
+                                    ? '1px solid #818CF8'
+                                    : '1px solid rgba(255,255,255,0.08)',
+                                  background: selected ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.02)',
+                                  opacity: selected ? 1 : 0.4,
                                   display: 'flex',
                                   flexDirection: 'column',
                                   alignItems: 'center',
@@ -820,9 +797,6 @@ export default function MergePDF() {
                                   transition: 'all 0.15s ease',
                                   overflow: 'hidden',
                                   padding: 0,
-                                  boxShadow: selected
-                                    ? '0 3px 0px rgba(59,130,246,0.2), inset 0 -3px 8px rgba(59,130,246,0.1), inset 0 3px 8px rgba(255,255,255,0.8)'
-                                    : 'none',
                                 }}
                               >
                                 {pdf.pageThumbs[pageNum] ? (
@@ -833,7 +807,7 @@ export default function MergePDF() {
                                       width: '100%',
                                       height: 40,
                                       objectFit: 'cover',
-                                      borderRadius: '10px 10px 0 0',
+                                      borderRadius: '11px 11px 0 0',
                                     }}
                                   />
                                 ) : (
@@ -841,8 +815,8 @@ export default function MergePDF() {
                                     style={{
                                       width: '100%',
                                       height: 40,
-                                      background: '#f1f5f9',
-                                      borderRadius: '10px 10px 0 0',
+                                      background: 'rgba(255,255,255,0.05)',
+                                      borderRadius: '11px 11px 0 0',
                                     }}
                                   />
                                 )}
@@ -850,7 +824,7 @@ export default function MergePDF() {
                                   style={{
                                     fontSize: '0.6rem',
                                     fontWeight: 600,
-                                    color: selected ? '#2563eb' : '#94a3b8',
+                                    color: selected ? '#A5B4FC' : '#71717A',
                                   }}
                                 >
                                   {pageNum}
@@ -864,7 +838,7 @@ export default function MergePDF() {
                                       width: 12,
                                       height: 12,
                                       borderRadius: '50%',
-                                      background: '#3b82f6',
+                                      background: '#818CF8',
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
@@ -885,13 +859,13 @@ export default function MergePDF() {
                                 width: 48,
                                 height: 60,
                                 borderRadius: 12,
-                                border: '2px dashed #cbd5e1',
+                                border: '1px dashed rgba(255,255,255,0.15)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '0.65rem',
-                                fontWeight: 700,
-                                color: '#94a3b8',
+                                fontWeight: 600,
+                                color: '#A1A1AA',
                               }}
                             >
                               +{pdf.pageCount - 20}
@@ -911,11 +885,10 @@ export default function MergePDF() {
         {error && (
           <div
             style={{
-              borderRadius: 24,
+              borderRadius: 14,
               padding: '20px 24px',
-              background: '#FEE2E2',
-              boxShadow:
-                '0 6px 0px rgba(185,28,28,0.3), 0 16px 40px rgba(220,38,38,0.25), inset 0 -6px 16px rgba(220,38,38,0.2), inset 0 6px 16px rgba(255,255,255,0.8)',
+              background: 'rgba(239,68,68,0.1)',
+              border: '1px solid rgba(239,68,68,0.2)',
               display: 'flex',
               alignItems: 'flex-start',
               gap: 12,
@@ -927,27 +900,34 @@ export default function MergePDF() {
               <p
                 style={{
                   fontWeight: 700,
-                  color: '#991b1b',
+                  color: '#F87171',
                   fontSize: '0.9rem',
                 }}
               >
                 Something went wrong
               </p>
-              <p style={{ fontSize: '0.8rem', color: '#dc2626' }}>{error}</p>
+              <p style={{ fontSize: '0.8rem', color: '#FCA5A5' }}>{error}</p>
             </div>
             <button
               onClick={() => setError(null)}
               style={{
                 padding: '6px 14px',
-                borderRadius: 14,
-                background: 'rgba(255,255,255,0.8)',
-                border: 'none',
+                borderRadius: 8,
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.08)',
                 fontSize: '0.78rem',
                 cursor: 'pointer',
-                color: '#475569',
+                color: '#E4E4E7',
                 fontWeight: 600,
-                boxShadow:
-                  '0 3px 0px rgba(0,0,0,0.08), inset 0 -2px 6px rgba(0,0,0,0.04), inset 0 2px 6px rgba(255,255,255,0.9)',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                e.currentTarget.style.color = '#fff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                e.currentTarget.style.color = '#E4E4E7';
               }}
             >
               Dismiss
@@ -957,114 +937,84 @@ export default function MergePDF() {
 
         {/* ── Success State ────────────────────────────────── */}
         {isSuccess && (
-          <div
-            style={{
-              borderRadius: 32,
-              padding: '28px 32px',
-              background: 'linear-gradient(145deg, #D1FAE5 0%, #A7F3D0 50%, #86EFAC 100%)',
-              boxShadow:
-                '0 12px 0px rgba(21,128,61,0.4), 0 36px 90px rgba(22,163,74,0.4), inset 0 -14px 32px rgba(22,163,74,0.3), inset 0 14px 32px rgba(255,255,255,0.95)',
-              textAlign: 'center',
-              marginBottom: 20,
-            }}
+          <HeroDitheringCard
+            accentColor="#6366f1"
+            minHeight={420}
+            style={{ marginBottom: 20 }}
           >
-            {/* success icon with glow ring */}
-            <div
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: '50%',
-                background: 'linear-gradient(145deg, #4ADE80, #22C55E)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 12px',
-                fontSize: '1.8rem',
-                boxShadow:
-                  '0 6px 0px rgba(21,128,61,0.45), 0 16px 40px rgba(22,163,74,0.4), inset 0 -8px 18px rgba(21,128,61,0.35), inset 0 8px 18px rgba(187,247,208,0.7), 0 0 30px rgba(74,222,128,0.3)',
-              }}
-            >
-              ✅
-            </div>
             <h3
               style={{
-                fontSize: '1.35rem',
-                fontWeight: 900,
-                color: '#14532D',
-                marginBottom: 4,
-                letterSpacing: '-0.01em',
+                fontSize: '1.5rem',
+                fontWeight: 800,
+                color: 'white',
+                marginBottom: 6,
+                letterSpacing: '-0.02em',
+                textAlign: 'center',
               }}
             >
               Merge Complete!
             </h3>
-            <p style={{ color: '#166534', fontSize: '0.88rem', fontWeight: 500, marginBottom: 18 }}>
+            <p style={{ color: '#A1A1AA', fontSize: '0.9rem', fontWeight: 500, marginBottom: 28, textAlign: 'center' }}>
               {totalSelectedPages} pages merged from {pdfFiles.length} PDFs
             </p>
 
-            {/* download button */}
-            <DownloadButton onDownload={handleDownload} label="Download Merged PDF" />
+            <DownloadButton
+              onDownload={handleDownload}
+              label="Download Merged PDF"
+              disabled={!mergedPdfBlob}
+            />
 
-            {/* secondary actions — clay pills */}
-            <div
-              style={{
-                display: 'flex',
-                gap: 12,
-                justifyContent: 'center',
-                flexWrap: 'wrap',
-              }}
-            >
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 8 }}>
               <button
                 onClick={handleMergeAnother}
                 style={{
-                  padding: '11px 26px',
-                  borderRadius: 18,
-                  background: 'rgba(255,255,255,0.9)',
-                  border: 'none',
-                  fontWeight: 700,
+                  padding: '10px 20px',
+                  borderRadius: 8,
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  fontWeight: 600,
                   fontSize: '0.875rem',
                   cursor: 'pointer',
-                  color: '#166534',
-                  boxShadow:
-                    '0 5px 0px rgba(21,128,61,0.2), 0 12px 30px rgba(22,163,74,0.18), inset 0 -4px 10px rgba(22,163,74,0.12), inset 0 4px 10px rgba(255,255,255,0.95)',
-                  transition:
-                    'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+                  color: '#E4E4E7',
+                  transition: 'all 0.2s ease',
                 }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.transform = 'translateY(-4px)')
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.transform = 'translateY(0)')
-                }
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                  e.currentTarget.style.color = '#E4E4E7';
+                }}
               >
                 Merge More PDFs
               </button>
               <Link
                 to="/"
                 style={{
-                  padding: '11px 26px',
-                  borderRadius: 18,
-                  background: 'rgba(255,255,255,0.9)',
-                  border: 'none',
-                  fontWeight: 700,
+                  padding: '10px 20px',
+                  borderRadius: 8,
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  fontWeight: 600,
                   fontSize: '0.875rem',
                   textDecoration: 'none',
-                  color: '#166534',
-                  boxShadow:
-                    '0 5px 0px rgba(21,128,61,0.2), 0 12px 30px rgba(22,163,74,0.18), inset 0 -4px 10px rgba(22,163,74,0.12), inset 0 4px 10px rgba(255,255,255,0.95)',
-                  transition:
-                    'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+                  color: '#E4E4E7',
+                  transition: 'all 0.2s ease',
                 }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.transform = 'translateY(-4px)')
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.transform = 'translateY(0)')
-                }
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                  e.currentTarget.style.color = '#E4E4E7';
+                }}
               >
                 Back to Tools
               </Link>
             </div>
-          </div>
+          </HeroDitheringCard>
         )}
 
         {/* ── ZONE 4 — Merge Action Bar ────────────────────── */}
@@ -1074,224 +1024,177 @@ export default function MergePDF() {
               position: 'sticky',
               bottom: 24,
               zIndex: 40,
-              borderRadius: 32,
-              padding: '20px 28px',
-              background: 'linear-gradient(135deg, #EFF6FF, #DBEAFE)',
-              boxShadow:
-                '0 10px 0px rgba(29,78,216,0.3), 0 30px 80px rgba(60,100,220,0.35), inset 0 -12px 28px rgba(37,99,235,0.22), inset 0 12px 28px rgba(255,255,255,0.95)',
+              borderRadius: 24,
+              padding: '16px 20px',
+              backgroundColor: '#18181B',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
               display: 'flex',
-              flexDirection: 'column',
+              flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 14,
-              flexWrap: 'wrap',
-              overflow: 'visible',
+              gap: 12,
               marginTop: 24,
               marginBottom: 40,
-              maxWidth: 720,
+              maxWidth: 520,
               marginLeft: 'auto',
               marginRight: 'auto',
             }}
           >
-            {/* summary pills */}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {[
-                `📄 ${pdfFiles.length} PDFs`,
-                `📋 ${totalSelectedPages} pages`,
-                `📁 ~${formatSize(estimatedSize)}`,
-              ].map((label, i) => (
-                <span
-                  key={i}
-                  style={{
-                    display: 'inline-block',
-                    padding: '5px 14px',
-                    borderRadius: 999,
-                    background: 'rgba(255,255,255,0.8)',
-                    fontSize: '0.72rem',
-                    fontWeight: 600,
-                    color: '#475569',
-                    boxShadow:
-                      'inset 0 -2px 6px rgba(0,0,0,0.05), inset 0 2px 6px rgba(255,255,255,0.8)',
-                  }}
-                >
-                  {label}
-                </span>
-              ))}
-            </div>
-
             {/* action buttons */}
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ display: 'contents' }}>
               <button
                 onClick={handleMergeAnother}
                 style={{
-                  padding: '10px 18px',
-                  borderRadius: 16,
-                  background: 'rgba(255,255,255,0.85)',
-                  border: 'none',
-                  fontWeight: 700,
-                  fontSize: '0.82rem',
+                  padding: '12px 24px',
+                  borderRadius: 999,
+                  background: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
                   cursor: 'pointer',
-                  color: '#475569',
-                  boxShadow:
-                    '0 4px 0px rgba(0,0,0,0.08), inset 0 -3px 8px rgba(0,0,0,0.04), inset 0 3px 8px rgba(255,255,255,0.9)',
-                  transition:
-                    'transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',
+                  color: '#A1A1AA',
+                  transition: 'all 0.2s ease',
                 }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.transform = 'translateY(-3px)')
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.transform = 'translateY(0)')
-                }
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = '#A1A1AA';
+                }}
               >
                 Clear All
               </button>
-              <button
+              <MotionButton
+                type="button"
                 onClick={handleMerge}
-                disabled={!canMerge}
-                style={{
-                  padding: '16px 40px',
-                  borderRadius: 20,
-                  border: 'none',
-                  background: processing
-                    ? '#94A3B8'
-                    : 'linear-gradient(160deg, #6366F1 0%, #4F46E5 100%)',
-                  color: 'white',
-                  fontWeight: 800,
-                  fontSize: '1.1rem',
-                  cursor: canMerge ? 'pointer' : 'not-allowed',
-                  boxShadow: processing
-                    ? 'none'
-                    : '0 6px 0px rgba(55,48,163,0.6), 0 16px 40px rgba(79,70,229,0.5), inset 0 -6px 14px rgba(55,48,163,0.4), inset 0 6px 14px rgba(200,210,255,0.35)',
-                  transition:
-                    'transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease',
-                  opacity: canMerge ? 1 : 0.5,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-                onMouseEnter={(e) => {
-                  if (canMerge)
-                    e.currentTarget.style.transform =
-                      'translateY(-5px) scale(1.02)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                }}
-              >
-                {processing ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />{' '}
-                    Merging... {progress}%
-                  </>
-                ) : (
-                  <>Merge {pdfFiles.length} PDFs</>
-                )}
-              </button>
+                disabled={!canMerge || processing}
+                loading={processing}
+                label={
+                  processing
+                    ? `Merging… ${progress}%`
+                    : `Merge ${pdfFiles.length} PDFs`
+                }
+                classes="shadow-[0_4px_14px_rgba(99,102,241,0.35)]"
+              />
             </div>
           </div>
         )}
       </div>
 
       {/* ── Processing Overlay ──────────────────────────────── */}
-      {processing && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 50,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'rgba(30, 58, 138, 0.7)',
-            backdropFilter: 'blur(8px)',
-          }}
-        >
+      {/* Always in DOM; opacity-fade prevents the compositing-layer flicker that mount/unmount causes */}
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 50,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: processing ? 'blur(8px)' : 'none',
+          opacity: processing ? 1 : 0,
+          pointerEvents: processing ? 'auto' : 'none',
+          transition: 'opacity 0.18s ease',
+          willChange: 'opacity',
+        }}
+      >
           <div
             style={{
-              borderRadius: 32,
-              padding: 40,
+              borderRadius: 20,
+              padding: '40px 32px',
               textAlign: 'center',
+              width: '100%',
               maxWidth: 360,
               margin: '0 16px',
-              background: 'linear-gradient(145deg, #EFF6FF, #DBEAFE)',
-              boxShadow:
-                '0 10px 0px rgba(29,78,216,0.3), 0 30px 80px rgba(60,100,220,0.4), inset 0 -12px 28px rgba(37,99,235,0.25), inset 0 12px 28px rgba(255,255,255,0.95)',
+              background: '#1C1D21',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)',
+              position: 'relative',
+              overflow: 'hidden'
             }}
           >
-            {/* animated icon */}
-            <div
-              style={{
-                width: 72,
-                height: 72,
-                borderRadius: '50%',
-                background: '#BFDBFE',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 20px',
-                fontSize: '2rem',
-                boxShadow:
-                  '0 6px 0px rgba(29,78,216,0.3), 0 16px 40px rgba(29,100,230,0.3), inset 0 -8px 18px rgba(37,99,235,0.25), inset 0 8px 18px rgba(255,255,255,0.8)',
-                animation: 'bounce 1s infinite',
-              }}
-            >
-              ⚡
-            </div>
-            <h3
-              style={{
-                fontSize: '1.25rem',
-                fontWeight: 900,
-                color: '#1e293b',
-                marginBottom: 6,
-              }}
-            >
-              Merging PDFs
-            </h3>
-            <p
-              style={{
-                color: '#64748b',
-                fontSize: '0.85rem',
-                marginBottom: 24,
-              }}
-            >
-              Running locally in your browser...
-            </p>
-            {/* progress bar */}
-            <div
-              style={{
-                width: '100%',
-                background: '#DBEAFE',
-                borderRadius: 999,
-                height: 12,
-                overflow: 'hidden',
-                boxShadow: 'inset 0 2px 6px rgba(60,100,220,0.2)',
-              }}
-            >
+            {/* subtle glow */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'radial-gradient(circle at 50% 0%, rgba(59,130,246,0.15) 0%, transparent 60%)',
+              pointerEvents: 'none',
+            }} />
+            
+            <div style={{ position: 'relative', zIndex: 10 }}>
+              {/* animated icon */}
               <div
                 style={{
-                  height: '100%',
-                  width: `${progress}%`,
-                  background:
-                    'linear-gradient(90deg, #3b82f6, #8b5cf6)',
-                  borderRadius: 999,
-                  transition: 'width 0.3s ease',
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  background: 'rgba(99,102,241,0.12)',
+                  border: '1px solid rgba(99,102,241,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px',
+                  animation: 'bounce 1s infinite',
                 }}
-              />
+              >
+                <Zap size={28} strokeWidth={1.8} color="#818cf8" fill="rgba(99,102,241,0.3)" />
+              </div>
+              <h3
+                style={{
+                  fontSize: '1.25rem',
+                  fontWeight: 800,
+                  color: 'white',
+                  marginBottom: 6,
+                }}
+              >
+                Merging PDFs
+              </h3>
+              <p
+                style={{
+                  color: '#A1A1AA',
+                  fontSize: '0.85rem',
+                  marginBottom: 24,
+                }}
+              >
+                Running locally in your browser...
+              </p>
+              {/* progress bar */}
+              <div
+                style={{
+                  width: '100%',
+                  background: 'rgba(255,255,255,0.06)',
+                  borderRadius: 999,
+                  height: 8,
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${progress}%`,
+                    background: 'linear-gradient(90deg, #4338CA, #60A5FA)',
+                    borderRadius: 999,
+                    transition: 'width 0.3s ease',
+                  }}
+                />
+              </div>
+              <p
+                style={{
+                  fontSize: '0.85rem',
+                  color: '#60A5FA',
+                  fontWeight: 600,
+                  marginTop: 10,
+                }}
+              >
+                {progress}%
+              </p>
             </div>
-            <p
-              style={{
-                fontSize: '0.85rem',
-                color: '#2563eb',
-                fontWeight: 700,
-                marginTop: 10,
-              }}
-            >
-              {progress}%
-            </p>
           </div>
         </div>
-      )}
 
       {/* bounce keyframes (inline style fallback) */}
       <style>{`

@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* Tailwind v4: load JS config so theme extensions (background, primary, manrope) and content globs (.tsx) apply */
+@config "../tailwind.config.js";
+
 /* Inter is bundled locally via system-ui fallback — no CDN needed */
 
 /* ── Design Tokens ─────────────────────────── */

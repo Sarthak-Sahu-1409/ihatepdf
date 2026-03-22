@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { Upload, X, Download, Loader2 } from 'lucide-react';
 import { UploadCard } from '../components/ui/upload-ui';
 import { DownloadButton } from '../components/ui/download-animation';
+import { saveBlobToDisk } from '../utils/saveBlobToDisk';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import formatFileSize from '../utils/formatFileSize';
 
@@ -465,15 +466,10 @@ export default function WatermarkPDF() {
   };
 
   /* ── Download ───────────────────────────────────────────── */
-  const handleDownload = () => {
-    if (!outputBlob) return;
-    const url  = URL.createObjectURL(outputBlob);
-    const a    = document.createElement('a');
-    const base = pdfFile.name.replace(/\.pdf$/i, '');
-    a.href     = url;
-    a.download = `${base}-watermarked.pdf`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const handleDownload = async () => {
+    if (!outputBlob) return false;
+    const base = (pdfFile?.name || 'document').replace(/\.pdf$/i, '');
+    return saveBlobToDisk(outputBlob, `${base}-watermarked.pdf`);
   };
 
   /* ── Reset ──────────────────────────────────────────────── */
@@ -672,7 +668,11 @@ export default function WatermarkPDF() {
             </div>
 
             {/* Download button */}
-            <DownloadButton onDownload={handleDownload} label="Download Watermarked PDF" />
+            <DownloadButton
+              onDownload={handleDownload}
+              label="Download Watermarked PDF"
+              disabled={!outputBlob}
+            />
 
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={handleWatermarkAnother} style={{

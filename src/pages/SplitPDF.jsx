@@ -3,6 +3,11 @@ import { Link } from 'react-router-dom';
 import { Upload, Download, ArrowLeft, Plus, Trash2, Scissors, X, Loader2 } from 'lucide-react';
 import { UploadCard } from '../components/ui/upload-ui';
 import { DownloadButton } from '../components/ui/download-animation';
+import {
+  saveBlobToDisk,
+  saveBlobViaAnchor,
+  SAVE_RESULT_BROWSER,
+} from '../utils/saveBlobToDisk';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 /* ─── helpers ─────────────────────────────────────────── */
@@ -214,13 +219,17 @@ export default function SplitPDF() {
   };
 
   /* ─── download ────────────────────────────────────────── */
-  const downloadOne = (item) => {
-    const url = URL.createObjectURL(item.blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = item.name; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const downloadOne = async (item) => {
+    if (!item?.blob) return false;
+    return saveBlobToDisk(item.blob, item.name);
   };
-  const downloadAll = () => outputs.forEach(o => downloadOne(o));
+  const downloadAll = () => {
+    if (outputs.length === 0) return false;
+    outputs.forEach((o) => {
+      if (o.blob) saveBlobViaAnchor(o.blob, o.name);
+    });
+    return SAVE_RESULT_BROWSER;
+  };
 
   /* ─── reset ───────────────────────────────────────────── */
   const handleReset = () => {
@@ -313,6 +322,7 @@ export default function SplitPDF() {
               <DownloadButton
                 onDownload={downloadAll}
                 label={`Download All ${outputs.length} Files`}
+                disabled={outputs.length === 0}
               />
             )}
 
@@ -342,6 +352,7 @@ export default function SplitPDF() {
                   <DownloadButton
                     onDownload={() => downloadOne(item)}
                     label="Download"
+                    disabled={!item.blob}
                   />
                 </div>
               ))}

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Upload, X, ArrowLeft, Download, Loader2 } from 'lucide-react';
 import { UploadCard } from '../components/ui/upload-ui';
 import { DownloadButton } from '../components/ui/download-animation';
+import { saveBlobToDisk } from '../utils/saveBlobToDisk';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import formatFileSize from '../utils/formatFileSize';
 
@@ -310,15 +311,10 @@ export default function CompressPDF() {
   };
 
   /* ── download ───────────────────────────────────────────── */
-  const handleDownload = () => {
-    if (!compressedBlob) return;
-    const url = URL.createObjectURL(compressedBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    const baseName = pdfFile.name.replace(/\.pdf$/i, '');
-    a.download = `${baseName}-compressed.pdf`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const handleDownload = async () => {
+    if (!compressedBlob) return false;
+    const baseName = (pdfFile?.name || 'document').replace(/\.pdf$/i, '');
+    return saveBlobToDisk(compressedBlob, `${baseName}-compressed.pdf`);
   };
 
   /* ── reset ──────────────────────────────────────────────── */
@@ -650,9 +646,10 @@ export default function CompressPDF() {
             )}
 
             {/* Download button */}
-            <DownloadButton 
-              onDownload={handleDownload} 
-              label="Download Compressed PDF" 
+            <DownloadButton
+              onDownload={handleDownload}
+              label="Download Compressed PDF"
+              disabled={!compressedBlob}
             />
 
             {/* Compress another */}
