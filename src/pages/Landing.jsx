@@ -19,6 +19,7 @@ import { BiSolidImageAlt } from 'react-icons/bi';
 import { RiPenNibFill } from 'react-icons/ri';
 import { IoWater } from 'react-icons/io5';
 import { BubbleText } from '../components/ui/bubble-text';
+import AnoAI from '../components/ui/animated-shader-background';
 
 export default function Landing() {
   /* ── Tool data with clay color variants and 3D Emojis ──── */
@@ -146,7 +147,15 @@ export default function Landing() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', overflowX: 'hidden', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ minHeight: '100vh', overflowX: 'hidden', fontFamily: "'Inter', system-ui, sans-serif", position: 'relative' }}>
+
+      {/* ── Animated Shader Background ──────────── */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        <AnoAI />
+      </div>
+
+      {/* ── Main Content (above shader) ─────────── */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
 
       {/* ── Navbar ─────────────────────────────── */}
       <FutureNavbar />
@@ -413,6 +422,7 @@ export default function Landing() {
           <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: 0 }}>© {new Date().getFullYear()} IHatePDF. Built with 💙 by Sarthak</p>
         </div>
       </footer>
+      </div>
     </div>
   );
 }

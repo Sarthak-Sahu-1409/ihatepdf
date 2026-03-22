@@ -19,15 +19,6 @@ function GlowingCard({ item, index, isExpanded }) {
         boxShadow: 'inset 0 2px 4px 0 rgba(0,0,0,0.06)'
       }}
     >
-      <GlowingEffect
-        spread={60}
-        glow={true}
-        disabled={false}
-        proximity={96}
-        inactiveZone={0.01}
-        borderWidth={3}
-        movementDuration={1.4}
-      />
       <div className="park_inside">
         <span className="img" style={{ backgroundColor: item.color }}>
           {item.icon}
@@ -87,7 +78,18 @@ export const StackedCards = () => {
           className={cn("btn", isExpanded && "active")} 
           onClick={toggleExpand}
         >
-          {isExpanded ? "Hide Features" : "Show All"}
+          <GlowingEffect
+            spread={40}
+            glow={true}
+            disabled={false}
+            proximity={64}
+            inactiveZone={0.01}
+            borderWidth={3}
+            movementDuration={1.4}
+          />
+          <span style={{ position: 'relative', zIndex: 10 }}>
+            {isExpanded ? "Hide Features" : "Show All"}
+          </span>
         </button>
       </div>
 
@@ -237,6 +239,7 @@ export const StackedCards = () => {
           top: 13px;
           transform: rotate(225deg);
           transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          z-index: 10;
         }
         .btn.active::after {
           transform: rotate(45deg);
