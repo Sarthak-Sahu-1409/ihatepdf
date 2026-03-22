@@ -1,8 +1,13 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Upload, Download, ArrowLeft, Plus, Trash2, Scissors, X, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft, Plus, Trash2, Scissors, X, Loader2,
+  Eye, AlignJustify, Copy, FileText, AlertTriangle,
+} from 'lucide-react';
 import { UploadCard } from '../components/ui/upload-ui';
 import { DownloadButton } from '../components/ui/download-animation';
+import MotionButton from '../components/ui/motion-button';
+import { HeroDitheringCard } from '../components/ui/hero-dithering-card';
 import {
   saveBlobToDisk,
   saveBlobViaAnchor,
@@ -17,37 +22,26 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-/* purple clay shadow tokens */
-const S = {
-  card: '0 8px 0px rgba(109,40,217,0.38), 0 24px 60px rgba(124,58,237,0.32), inset 0 -10px 24px rgba(124,58,237,0.22), inset 0 10px 24px rgba(255,255,255,0.92)',
-  btn:  '0 6px 0px rgba(109,40,217,0.42), 0 16px 40px rgba(124,58,237,0.35), inset 0 -6px 14px rgba(109,40,217,0.28), inset 0 6px 14px rgba(221,214,254,0.5)',
-  sm:   '0 4px 0px rgba(109,40,217,0.28), 0 10px 26px rgba(124,58,237,0.22), inset 0 -4px 10px rgba(124,58,237,0.18), inset 0 4px 10px rgba(255,255,255,0.9)',
-  back: '0 5px 0px rgba(109,40,217,0.25), 0 14px 36px rgba(124,58,237,0.2), inset 0 -4px 10px rgba(109,40,217,0.15), inset 0 4px 10px rgba(255,255,255,0.97)',
-  err:  '0 5px 0px rgba(185,28,28,0.28), 0 14px 36px rgba(220,38,38,0.2), inset 0 -5px 12px rgba(220,38,38,0.18), inset 0 5px 12px rgba(255,255,255,0.85)',
-  out:  '0 7px 0px rgba(109,40,217,0.35), 0 20px 50px rgba(124,58,237,0.3), inset 0 -8px 18px rgba(124,58,237,0.22), inset 0 8px 18px rgba(255,255,255,0.92)',
-};
-
 /* ═══════════════════════════════════════════════════════
    SPLIT PDF PAGE
    ═══════════════════════════════════════════════════════ */
 export default function SplitPDF() {
   /* ─── file state ─────────────────────────────────────── */
-  const [pdfFile, setPdfFile]       = useState(null);
+  const [pdfFile, setPdfFile]         = useState(null);
   const [arrayBuffer, setArrayBuffer] = useState(null);
-  const [pageCount, setPageCount]   = useState(0);
-  const [thumbnails, setThumbnails] = useState([]); // array[pageIndex] = dataUrl
+  const [pageCount, setPageCount]     = useState(0);
+  const [thumbnails, setThumbnails]   = useState([]);
   const [thumbsLoading, setThumbsLoading] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
+  const [isDragOver, setIsDragOver]   = useState(false);
 
   /* ─── split mode ─────────────────────────────────────── */
-  // 'visual' | 'range' | 'all'
-  const [splitMode, setSplitMode]   = useState('visual');
+  const [splitMode, setSplitMode] = useState('visual');
 
-  /* ─── visual mode: selected pages ─────────────────────── */
+  /* ─── visual mode ─────────────────────────────────────── */
   const [selectedPages, setSelectedPages] = useState(new Set());
 
-  /* ─── range mode: list of {from,to} ───────────────────── */
-  const [ranges, setRanges]         = useState([{ from: 1, to: 1 }]);
+  /* ─── range mode ──────────────────────────────────────── */
+  const [ranges, setRanges] = useState([{ from: 1, to: 1 }]);
 
   /* ─── processing ─────────────────────────────────────── */
   const [processing, setProcessing] = useState(false);
@@ -55,8 +49,8 @@ export default function SplitPDF() {
   const [error, setError]           = useState(null);
 
   /* ─── results ────────────────────────────────────────── */
-  const [outputs, setOutputs]       = useState([]); // [{name, blob, size}]
-  const [isSuccess, setIsSuccess]   = useState(false);
+  const [outputs, setOutputs]   = useState([]);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -101,7 +95,6 @@ export default function SplitPDF() {
       setSelectedPages(new Set(Array.from({ length: n }, (_, i) => i + 1)));
       setRanges([{ from: 1, to: n }]);
 
-      // Render thumbnails (max 40)
       const limit = Math.min(n, 40);
       const thumbArr = new Array(n).fill(null);
       for (let i = 1; i <= limit; i++) {
@@ -137,40 +130,31 @@ export default function SplitPDF() {
     s.has(n) ? s.delete(n) : s.add(n);
     return s;
   });
-  const selectAll = () => setSelectedPages(new Set(Array.from({ length: pageCount }, (_, i) => i + 1)));
+  const selectAll  = () => setSelectedPages(new Set(Array.from({ length: pageCount }, (_, i) => i + 1)));
   const selectNone = () => setSelectedPages(new Set());
 
   /* ─── range mode helpers ──────────────────────────────── */
-  const addRange = () => setRanges(r => [...r, { from: 1, to: pageCount }]);
+  const addRange    = () => setRanges(r => [...r, { from: 1, to: pageCount }]);
   const removeRange = (i) => setRanges(r => r.filter((_, idx) => idx !== i));
   const updateRange = (i, field, val) => {
     const v = Math.max(1, Math.min(pageCount, parseInt(val) || 1));
     setRanges(r => r.map((rng, idx) => idx === i ? { ...rng, [field]: v } : rng));
   };
 
-  /* ─── build range list for splitting ─────────────────── */
+  /* ─── build range list ────────────────────────────────── */
   const buildRanges = () => {
-    if (splitMode === 'all') {
-      return Array.from({ length: pageCount }, (_, i) => ({ from: i + 1, to: i + 1 }));
-    }
+    if (splitMode === 'all') return Array.from({ length: pageCount }, (_, i) => ({ from: i + 1, to: i + 1 }));
     if (splitMode === 'visual') {
-      // Consecutive selected pages become one output
       if (selectedPages.size === 0) return [];
-      const sorted = Array.from(selectedPages).sort((a, b) => a - b);
-      // Each selected page as its OWN file (visual = pick individual pages to extract)
-      return sorted.map(p => ({ from: p, to: p }));
+      return Array.from(selectedPages).sort((a, b) => a - b).map(p => ({ from: p, to: p }));
     }
-    // range mode
     return ranges.filter(r => r.from >= 1 && r.to >= r.from && r.to <= pageCount);
   };
 
   /* ─── split ───────────────────────────────────────────── */
   const handleSplit = async () => {
     const rngList = buildRanges();
-    if (!rngList.length) {
-      setError('No valid ranges — please select pages or configure ranges.');
-      return;
-    }
+    if (!rngList.length) { setError('No valid ranges — please select pages or configure ranges.'); return; }
     if (!arrayBuffer) return;
 
     setProcessing(true);
@@ -179,12 +163,9 @@ export default function SplitPDF() {
 
     try {
       const { PDFDocument } = await import('pdf-lib');
-
       let buf = arrayBuffer;
       const { isLargeFile, processLargeFile } = await import('../utils/streamProcessor');
-      if (isLargeFile(pdfFile)) {
-        buf = await processLargeFile(pdfFile);
-      }
+      if (isLargeFile(pdfFile)) buf = await processLargeFile(pdfFile);
 
       const srcDoc = await PDFDocument.load(buf, { ignoreEncryption: true, updateMetadata: false });
       const baseName = pdfFile.name.replace(/\.pdf$/i, '');
@@ -198,13 +179,7 @@ export default function SplitPDF() {
         pages.forEach(p => newDoc.addPage(p));
         const bytes = await newDoc.save();
         const blob = new Blob([bytes], { type: 'application/pdf' });
-        results.push({
-          name: `${baseName}_pages_${from}-${to}.pdf`,
-          blob,
-          size: bytes.byteLength,
-          from,
-          to,
-        });
+        results.push({ name: `${baseName}_pages_${from}-${to}.pdf`, blob, size: bytes.byteLength, from, to });
         setProgress(Math.round(((i + 1) / rngList.length) * 95));
       }
 
@@ -219,15 +194,14 @@ export default function SplitPDF() {
   };
 
   /* ─── download ────────────────────────────────────────── */
-  const downloadOne = async (item) => {
+  const downloadOne = (item) => {
     if (!item?.blob) return false;
-    return saveBlobToDisk(item.blob, item.name);
+    saveBlobViaAnchor(item.blob, item.name);
+    return SAVE_RESULT_BROWSER;
   };
   const downloadAll = () => {
     if (outputs.length === 0) return false;
-    outputs.forEach((o) => {
-      if (o.blob) saveBlobViaAnchor(o.blob, o.name);
-    });
+    outputs.forEach(o => { if (o.blob) saveBlobViaAnchor(o.blob, o.name); });
     return SAVE_RESULT_BROWSER;
   };
 
@@ -243,6 +217,14 @@ export default function SplitPDF() {
   /* ─── computed ────────────────────────────────────────── */
   const rangesValid = buildRanges().length > 0;
 
+  const splitLabel = processing
+    ? `Splitting… ${progress}%`
+    : splitMode === 'all'
+      ? `Split into ${pageCount} Files`
+      : splitMode === 'visual'
+        ? `Extract ${selectedPages.size} Page${selectedPages.size !== 1 ? 's' : ''}`
+        : `Split into ${ranges.length} File${ranges.length !== 1 ? 's' : ''}`;
+
   /* ════════════════════════════════════════════════════════
      RENDER
      ════════════════════════════════════════════════════════ */
@@ -256,44 +238,44 @@ export default function SplitPDF() {
             to="/"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '10px 22px', borderRadius: 18,
-              background: 'rgba(255,255,255,0.92)', fontWeight: 700,
-              color: '#5B21B6', textDecoration: 'none', marginBottom: 24,
-              boxShadow: S.back, transition: 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+              padding: '10px 20px', borderRadius: 20,
+              background: 'rgba(255,255,255,0.06)', fontWeight: 600,
+              color: '#E4E4E7', textDecoration: 'none',
+              border: '1px solid rgba(255,255,255,0.08)',
+              transition: 'all 0.2s ease', marginBottom: 24,
             }}
-            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#E4E4E7'; }}
           >
-            <ArrowLeft size={17} /> Back to Home
+            <ArrowLeft size={18} /> Back to Home
           </Link>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
-            <div style={{
-              width: 56, height: 56, borderRadius: 18, background: '#DDD6FE', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem',
-              boxShadow: S.sm,
-            }}>✂️</div>
-            <div>
-              <h1 style={{ fontSize: 'clamp(1.8rem, 5vw, 2.8rem)', fontWeight: 900, color: 'white', margin: 0, textShadow: '0 4px 20px rgba(0,0,0,0.18)', letterSpacing: '-0.02em' }}>
-                Split PDF
-              </h1>
-              <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.88rem', margin: 0 }}>
-                Extract pages visually, by range, or split every page into its own file
-              </p>
-            </div>
-          </div>
+          <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, color: 'white', marginBottom: 10, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+            Split PDF
+          </h1>
+          <p style={{ color: '#A1A1AA', fontSize: '0.9rem', margin: 0 }}>
+            Extract pages visually, by range, or split every page into its own file
+          </p>
         </div>
 
         {/* ── Error banner ────────────────────────────────── */}
         {error && (
           <div style={{
-            borderRadius: 18, padding: '14px 18px', marginBottom: 20,
-            background: '#FEE2E2', boxShadow: S.err,
-            display: 'flex', alignItems: 'center', gap: 12,
+            borderRadius: 14, padding: '20px 24px',
+            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+            display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 20,
           }}>
-            <span style={{ fontSize: '1.1rem' }}>⚠️</span>
-            <p style={{ flex: 1, fontWeight: 600, color: '#991B1B', fontSize: '0.88rem', margin: 0 }}>{error}</p>
-            <button onClick={() => setError(null)} style={{ background: 'rgba(255,255,255,0.7)', border: 'none', borderRadius: 10, padding: '4px 12px', color: '#991B1B', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>✕</button>
+            <AlertTriangle size={20} color="#F87171" style={{ flexShrink: 0, marginTop: 1 }} />
+            <div style={{ flex: 1 }}>
+              <p style={{ fontWeight: 700, color: '#F87171', fontSize: '0.9rem', margin: '0 0 2px' }}>Something went wrong</p>
+              <p style={{ fontSize: '0.8rem', color: '#FCA5A5', margin: 0 }}>{error}</p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.78rem', cursor: 'pointer', color: '#E4E4E7', fontWeight: 600 }}
+            >
+              Dismiss
+            </button>
           </div>
         )}
 
@@ -301,23 +283,14 @@ export default function SplitPDF() {
             SUCCESS STATE
             ════════════════════════════════════════════════════ */}
         {isSuccess && (
-          <div style={{ borderRadius: 32, padding: '32px 28px', background: 'linear-gradient(145deg, #EDE9FE, #DDD6FE)', boxShadow: S.card, marginBottom: 24 }}>
-            {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: 28 }}>
-              <div style={{
-                width: 72, height: 72, borderRadius: 22, margin: '0 auto 12px',
-                background: '#DDD6FE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem',
-                boxShadow: S.sm,
-              }}>✅</div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#3B0764', margin: '0 0 4px' }}>
-                Split Complete!
-              </h2>
-              <p style={{ color: '#6D28D9', fontSize: '0.9rem', margin: 0 }}>
-                {outputs.length} file{outputs.length !== 1 ? 's' : ''} ready to download
-              </p>
-            </div>
+          <HeroDitheringCard accentColor="#6366f1" minHeight={420} style={{ marginBottom: 24 }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'white', marginBottom: 6, letterSpacing: '-0.02em', textAlign: 'center' }}>
+              Split Complete!
+            </h2>
+            <p style={{ color: '#A1A1AA', fontSize: '0.9rem', fontWeight: 500, marginBottom: 28, textAlign: 'center' }}>
+              {outputs.length} file{outputs.length !== 1 ? 's' : ''} ready to download
+            </p>
 
-            {/* Download all button */}
             {outputs.length > 1 && (
               <DownloadButton
                 onDownload={downloadAll}
@@ -326,75 +299,65 @@ export default function SplitPDF() {
               />
             )}
 
-            {/* Individual output cards grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14, marginBottom: 20 }}>
+            {/* Individual file cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 12, marginBottom: 20, width: '100%' }}>
               {outputs.map((item, i) => (
                 <div key={i} style={{
-                  borderRadius: 20, padding: '16px 14px', background: 'rgba(255,255,255,0.82)',
-                  boxShadow: '0 5px 0px rgba(109,40,217,0.22), 0 12px 30px rgba(124,58,237,0.18), inset 0 -5px 12px rgba(124,58,237,0.1), inset 0 5px 12px rgba(255,255,255,0.95)',
+                  borderRadius: 14, padding: '16px 14px',
+                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
                   display: 'flex', flexDirection: 'column', gap: 10,
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{
-                      width: 40, height: 40, borderRadius: 12, background: '#EDE9FE',
+                      width: 36, height: 36, borderRadius: 10,
+                      background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.2)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                      boxShadow: '0 3px 0px rgba(109,40,217,0.2), inset 0 2px 6px rgba(255,255,255,0.9)',
                     }}>
-                      <span style={{ fontSize: '1.1rem' }}>📄</span>
+                      <FileText size={16} color="#818CF8" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontWeight: 700, fontSize: '0.78rem', color: '#3B0764', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</p>
-                      <p style={{ fontSize: '0.7rem', color: '#7C3AED', margin: 0, fontWeight: 500 }}>
-                        {item.from === item.to ? `Page ${item.from}` : `Pages ${item.from}–${item.to}`} • {formatSize(item.size)}
+                      <p style={{ fontWeight: 600, fontSize: '0.78rem', color: 'white', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</p>
+                      <p style={{ fontSize: '0.7rem', color: '#A1A1AA', margin: 0, fontWeight: 500 }}>
+                        {item.from === item.to ? `Page ${item.from}` : `Pages ${item.from}–${item.to}`} · {formatSize(item.size)}
                       </p>
                     </div>
                   </div>
-                  <DownloadButton
-                    onDownload={() => downloadOne(item)}
-                    label="Download"
-                    disabled={!item.blob}
-                  />
+                  <DownloadButton onDownload={() => downloadOne(item)} label="Download" disabled={!item.blob} />
                 </div>
               ))}
             </div>
 
-            {/* Split Another button */}
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
               <button
                 onClick={handleReset}
-                style={{
-                  flex: 1, padding: 12, borderRadius: 16, border: 'none',
-                  background: 'rgba(255,255,255,0.7)', color: '#6D28D9',
-                  fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer',
-                  boxShadow: '0 4px 0px rgba(109,40,217,0.15), 0 10px 24px rgba(124,58,237,0.12), inset 0 -3px 8px rgba(109,40,217,0.1), inset 0 3px 8px rgba(255,255,255,0.95)',
-                  transition: 'transform 0.2s ease',
-                }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                style={{ padding: '10px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', color: '#E4E4E7', transition: 'all 0.2s ease' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#E4E4E7'; }}
               >
-                ✂️ Split Another PDF
+                Split Another PDF
               </button>
-              <Link to="/" style={{
-                flex: 1, padding: 12, borderRadius: 16, background: 'rgba(255,255,255,0.7)', color: '#3730A3', fontWeight: 700, fontSize: '0.92rem', textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 0px rgba(55,48,163,0.15), 0 10px 24px rgba(60,100,220,0.12), inset 0 -3px 8px rgba(100,130,220,0.1), inset 0 3px 8px rgba(255,255,255,0.95)', transition: 'transform 0.2s ease'
-              }}
-              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+              <Link
+                to="/"
+                style={{ padding: '10px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, fontSize: '0.875rem', textDecoration: 'none', color: '#E4E4E7', transition: 'all 0.2s ease' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#E4E4E7'; }}
               >
-                ← Back to Tools
+                Back to Tools
               </Link>
             </div>
-          </div>
+          </HeroDitheringCard>
         )}
 
         {/* ════════════════════════════════════════════════════
-            UPLOAD ZONE (no file loaded)
+            UPLOAD ZONE
             ════════════════════════════════════════════════════ */}
         {!pdfFile && !isSuccess && (
           <div onDragOver={e => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} style={{ marginBottom: 20 }}>
             <UploadCard
               status="idle"
-              title={isDragOver ? "Drop your PDF here!" : "Drop your PDF to split"}
-              description="or click to browse • Single PDF file"
+              title={isDragOver ? 'Drop your PDF here!' : 'Drop your PDF to split'}
+              description="or click to browse · Single PDF file"
               onClick={() => fileInputRef.current?.click()}
               onDrop={handleDrop}
             />
@@ -403,37 +366,41 @@ export default function SplitPDF() {
         )}
 
         {/* ════════════════════════════════════════════════════
-            MAIN TOOL PANEL (file loaded, not success)
+            MAIN TOOL PANEL
             ════════════════════════════════════════════════════ */}
         {pdfFile && !isSuccess && (
           <>
             {/* ── File info bar ───────────────────────────────── */}
             <div style={{
-              borderRadius: 24, padding: '16px 20px', marginBottom: 24,
-              background: 'linear-gradient(135deg, #EDE9FE, #DDD6FE)', boxShadow: S.sm,
+              borderRadius: 14, padding: '16px 20px', marginBottom: 24,
+              backgroundColor: '#1C1D21',
+              backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
               display: 'flex', alignItems: 'center', gap: 14,
             }}>
-              {/* thumbnail preview */}
               {thumbnails[0] ? (
-                <img src={thumbnails[0]} alt="p1" style={{ width: 40, height: 52, objectFit: 'cover', borderRadius: 8, flexShrink: 0, boxShadow: '0 3px 0px rgba(0,0,0,0.1)' }} />
+                <img src={thumbnails[0]} alt="p1" style={{ width: 40, height: 52, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
               ) : (
-                <div style={{ width: 40, height: 52, borderRadius: 8, background: '#C4B5FD', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>📄</div>
+                <div style={{ width: 40, height: 52, borderRadius: 8, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FileText size={18} color="#818CF8" />
+                </div>
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontWeight: 700, color: '#3B0764', fontSize: '0.95rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pdfFile.name}</p>
-                <p style={{ fontSize: '0.78rem', color: '#7C3AED', margin: 0 }}>{formatSize(pdfFile.size)} • {pageCount} page{pageCount !== 1 ? 's' : ''}</p>
+                <p style={{ fontWeight: 700, color: 'white', fontSize: '0.95rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pdfFile.name}</p>
+                <p style={{ fontSize: '0.78rem', color: '#A1A1AA', margin: 0 }}>{formatSize(pdfFile.size)} · {pageCount} page{pageCount !== 1 ? 's' : ''}</p>
               </div>
               <button
                 onClick={handleReset}
                 style={{
-                  width: 34, height: 34, borderRadius: 12, background: 'rgba(255,255,255,0.85)', border: 'none',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#7C3AED',
-                  boxShadow: '0 3px 0px rgba(109,40,217,0.16), inset 0 -2px 6px rgba(109,40,217,0.1), inset 0 2px 6px rgba(255,255,255,0.95)',
-                  transition: 'transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',
+                  width: 32, height: 32, borderRadius: 8, background: 'transparent',
+                  border: '1px solid rgba(239,68,68,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: '#EF4444', transition: 'all 0.2s ease',
                 }}
                 title="Remove file"
-                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <X size={16} />
               </button>
@@ -442,9 +409,9 @@ export default function SplitPDF() {
             {/* ── Mode selector ───────────────────────────────── */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 24, flexWrap: 'wrap' }}>
               {[
-                { id: 'visual', emoji: '👁️', label: 'Visual Pick', sub: 'Click pages to select' },
-                { id: 'range',  emoji: '🔢', label: 'Page Ranges', sub: 'Type from–to ranges' },
-                { id: 'all',    emoji: '📑', label: 'Every Page', sub: 'One file per page' },
+                { id: 'visual', icon: <Eye size={16} />,          label: 'Visual Pick',  sub: 'Click pages to select' },
+                { id: 'range',  icon: <AlignJustify size={16} />, label: 'Page Ranges',  sub: 'Type from–to ranges' },
+                { id: 'all',    icon: <Copy size={16} />,         label: 'Every Page',   sub: 'One file per page' },
               ].map(m => {
                 const active = splitMode === m.id;
                 return (
@@ -452,18 +419,16 @@ export default function SplitPDF() {
                     key={m.id}
                     onClick={() => setSplitMode(m.id)}
                     style={{
-                      flex: 1, minWidth: 130, padding: '14px 16px', borderRadius: 20, border: 'none',
-                      background: active ? 'linear-gradient(135deg, #DDD6FE, #C4B5FD)' : 'rgba(255,255,255,0.82)',
+                      flex: 1, minWidth: 130, padding: '14px 16px', borderRadius: 14,
+                      border: active ? '1px solid rgba(99,102,241,0.35)' : '1px solid rgba(255,255,255,0.06)',
+                      background: active ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.03)',
                       cursor: 'pointer', textAlign: 'left',
-                      boxShadow: active ? S.sm : '0 3px 0px rgba(109,40,217,0.12), 0 8px 20px rgba(124,58,237,0.1), inset 0 -2px 6px rgba(109,40,217,0.08), inset 0 2px 6px rgba(255,255,255,0.95)',
-                      outline: active ? '2px solid #8B5CF6' : '2px solid transparent',
-                      transition: 'all 0.2s cubic-bezier(0.34,1.2,0.64,1)',
-                      transform: active ? 'translateY(-2px)' : 'translateY(0)',
+                      transition: 'all 0.2s ease',
                     }}
                   >
-                    <p style={{ fontSize: '1.1rem', margin: '0 0 2px' }}>{m.emoji}</p>
-                    <p style={{ fontWeight: 800, color: '#3B0764', fontSize: '0.88rem', margin: '0 0 1px' }}>{m.label}</p>
-                    <p style={{ color: '#7C3AED', fontSize: '0.72rem', margin: 0, fontWeight: 500 }}>{m.sub}</p>
+                    <div style={{ color: active ? '#818CF8' : '#71717A', marginBottom: 6 }}>{m.icon}</div>
+                    <p style={{ fontWeight: 700, color: active ? '#C7D2FE' : '#E4E4E7', fontSize: '0.88rem', margin: '0 0 2px' }}>{m.label}</p>
+                    <p style={{ color: active ? '#818CF8' : '#71717A', fontSize: '0.72rem', margin: 0, fontWeight: 500 }}>{m.sub}</p>
                   </button>
                 );
               })}
@@ -471,26 +436,33 @@ export default function SplitPDF() {
 
             {/* ── VISUAL MODE: Thumbnail grid ──────────────────── */}
             {splitMode === 'visual' && (
-              <div style={{ borderRadius: 28, padding: '20px 20px 24px', background: 'linear-gradient(145deg, #F5F3FF, #EDE9FE)', boxShadow: S.out, marginBottom: 22 }}>
+              <div style={{
+                borderRadius: 14, padding: '20px',
+                backgroundColor: '#1C1D21',
+                backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+                marginBottom: 22,
+              }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
                   <div>
-                    <h3 style={{ fontWeight: 800, color: '#3B0764', fontSize: '1rem', margin: '0 0 2px' }}>
+                    <h3 style={{ fontWeight: 700, color: 'white', fontSize: '1rem', margin: '0 0 2px' }}>
                       Select pages to extract
                     </h3>
-                    <p style={{ fontSize: '0.78rem', color: '#7C3AED', margin: 0 }}>
-                      {selectedPages.size} of {pageCount} selected • each becomes its own PDF
+                    <p style={{ fontSize: '0.78rem', color: '#A1A1AA', margin: 0 }}>
+                      {selectedPages.size} of {pageCount} selected · each becomes its own PDF
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={selectAll} style={{ padding: '6px 14px', borderRadius: 12, border: 'none', background: 'rgba(255,255,255,0.85)', color: '#6D28D9', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', boxShadow: S.back }}>Select All</button>
-                    <button onClick={selectNone} style={{ padding: '6px 14px', borderRadius: 12, border: 'none', background: 'rgba(255,255,255,0.85)', color: '#6D28D9', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', boxShadow: S.back }}>Clear</button>
+                    <button onClick={selectAll} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.06)', color: '#E4E4E7', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>Select All</button>
+                    <button onClick={selectNone} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.06)', color: '#E4E4E7', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>Clear</button>
                   </div>
                 </div>
 
                 {thumbsLoading ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '40px 0', color: '#7C3AED' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '40px 0', color: '#818CF8' }}>
                     <Loader2 size={24} style={{ animation: 'spin 1s linear infinite' }} />
-                    <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Loading page previews…</span>
+                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#A1A1AA' }}>Loading page previews…</span>
                   </div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 10 }}>
@@ -506,37 +478,36 @@ export default function SplitPDF() {
                             borderRadius: 14, border: 'none', background: 'transparent',
                             cursor: 'pointer', padding: 0,
                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                            transform: selected ? 'scale(1.06)' : 'scale(1)',
-                            transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1)',
+                            transform: selected ? 'scale(1.05)' : 'scale(1)',
+                            transition: 'transform 0.18s ease',
                           }}
                         >
                           <div style={{
-                            width: '100%', aspectRatio: '3/4', borderRadius: 12, overflow: 'hidden',
-                            outline: selected ? '3px solid #7C3AED' : '3px solid transparent',
+                            width: '100%', aspectRatio: '3/4', borderRadius: 10, overflow: 'hidden',
+                            outline: selected ? '2px solid #6366f1' : '2px solid transparent',
                             outlineOffset: 2,
-                            boxShadow: selected
-                              ? '0 6px 0px rgba(109,40,217,0.35), 0 14px 32px rgba(124,58,237,0.32)'
-                              : '0 3px 0px rgba(0,0,0,0.1), 0 8px 20px rgba(0,0,0,0.08)',
+                            boxShadow: selected ? '0 4px 14px rgba(99,102,241,0.4)' : '0 2px 8px rgba(0,0,0,0.3)',
                             transition: 'all 0.18s ease',
                             position: 'relative',
                           }}>
                             {thumb ? (
                               <img src={thumb} alt={`Page ${pageNum}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                             ) : (
-                              <div style={{ width: '100%', height: '100%', background: '#E9D5FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>📄</div>
+                              <div style={{ width: '100%', height: '100%', background: 'rgba(99,102,241,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <FileText size={20} color="#818CF8" />
+                              </div>
                             )}
-                            {/* Checkmark overlay */}
                             {selected && (
                               <div style={{
-                                position: 'absolute', top: 4, right: 4, width: 20, height: 20,
-                                borderRadius: 999, background: '#7C3AED',
+                                position: 'absolute', top: 4, right: 4, width: 18, height: 18,
+                                borderRadius: '50%', background: '#6366f1',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '0.65rem', color: 'white', fontWeight: 900,
+                                fontSize: '0.6rem', color: 'white', fontWeight: 900,
                               }}>✓</div>
                             )}
                           </div>
-                          <span style={{ fontSize: '0.68rem', fontWeight: selected ? 700 : 500, color: selected ? '#5B21B6' : '#7C3AED' }}>
-                            {pageNum > 40 ? `p.${pageNum}` : `p.${pageNum}`}
+                          <span style={{ fontSize: '0.68rem', fontWeight: selected ? 700 : 500, color: selected ? '#818CF8' : '#71717A' }}>
+                            p.{pageNum}
                           </span>
                         </button>
                       );
@@ -548,62 +519,65 @@ export default function SplitPDF() {
 
             {/* ── RANGE MODE ──────────────────────────────────── */}
             {splitMode === 'range' && (
-              <div style={{ borderRadius: 28, padding: '20px 20px 24px', background: 'linear-gradient(145deg, #F5F3FF, #EDE9FE)', boxShadow: S.out, marginBottom: 22 }}>
+              <div style={{
+                borderRadius: 14, padding: '20px',
+                backgroundColor: '#1C1D21',
+                backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+                marginBottom: 22,
+              }}>
                 <div style={{ marginBottom: 16 }}>
-                  <h3 style={{ fontWeight: 800, color: '#3B0764', fontSize: '1rem', margin: '0 0 2px' }}>Configure page ranges</h3>
-                  <p style={{ fontSize: '0.78rem', color: '#7C3AED', margin: 0 }}>Each range creates a separate PDF file</p>
+                  <h3 style={{ fontWeight: 700, color: 'white', fontSize: '1rem', margin: '0 0 2px' }}>Configure page ranges</h3>
+                  <p style={{ fontSize: '0.78rem', color: '#A1A1AA', margin: 0 }}>Each range creates a separate PDF file</p>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
                   {ranges.map((r, i) => (
                     <div key={i} style={{
-                      borderRadius: 18, padding: '14px 16px', background: 'rgba(255,255,255,0.85)',
-                      boxShadow: '0 4px 0px rgba(109,40,217,0.15), 0 10px 26px rgba(124,58,237,0.12), inset 0 -3px 8px rgba(109,40,217,0.08), inset 0 3px 8px rgba(255,255,255,0.95)',
+                      borderRadius: 12, padding: '14px 16px',
+                      background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
                       display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 200 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
-                          <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.05em' }}>From (page)</label>
+                          <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#818CF8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>From</label>
                           <input
                             type="number" min={1} max={pageCount} value={r.from}
                             onChange={e => updateRange(i, 'from', e.target.value)}
                             style={{
-                              padding: '8px 12px', borderRadius: 12, border: '2px solid #C4B5FD',
-                              fontWeight: 700, color: '#3B0764', fontSize: '1rem', width: '100%',
-                              background: 'white', outline: 'none', boxSizing: 'border-box',
+                              padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(99,102,241,0.3)',
+                              fontWeight: 700, color: 'white', fontSize: '1rem', width: '100%',
+                              background: 'rgba(99,102,241,0.08)', outline: 'none', boxSizing: 'border-box',
                             }}
                           />
                         </div>
-                        <span style={{ fontSize: '1.2rem', color: '#8B5CF6', paddingTop: 20 }}>→</span>
+                        <span style={{ fontSize: '1rem', color: '#6366f1', paddingTop: 18 }}>→</span>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
-                          <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.05em' }}>To (page)</label>
+                          <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#818CF8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>To</label>
                           <input
                             type="number" min={1} max={pageCount} value={r.to}
                             onChange={e => updateRange(i, 'to', e.target.value)}
                             style={{
-                              padding: '8px 12px', borderRadius: 12, border: '2px solid #C4B5FD',
-                              fontWeight: 700, color: '#3B0764', fontSize: '1rem', width: '100%',
-                              background: 'white', outline: 'none', boxSizing: 'border-box',
+                              padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(99,102,241,0.3)',
+                              fontWeight: 700, color: 'white', fontSize: '1rem', width: '100%',
+                              background: 'rgba(99,102,241,0.08)', outline: 'none', boxSizing: 'border-box',
                             }}
                           />
                         </div>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 90 }}>
-                        <p style={{ fontSize: '0.68rem', color: '#7C3AED', margin: 0, fontWeight: 600 }}>Preview name:</p>
-                        <p style={{ fontSize: '0.72rem', color: '#3B0764', fontWeight: 700, margin: 0, wordBreak: 'break-all' }}>
-                          …_pages_{r.from}-{r.to}.pdf
-                        </p>
+                        <p style={{ fontSize: '0.68rem', color: '#818CF8', margin: 0, fontWeight: 600 }}>Output name:</p>
+                        <p style={{ fontSize: '0.72rem', color: '#A1A1AA', fontWeight: 600, margin: 0, wordBreak: 'break-all' }}>…_pages_{r.from}-{r.to}.pdf</p>
                       </div>
                       {ranges.length > 1 && (
                         <button onClick={() => removeRange(i)} style={{
-                          width: 32, height: 32, borderRadius: 10, border: 'none', background: '#FEE2E2',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                          color: '#EF4444', flexShrink: 0,
-                          boxShadow: '0 3px 0px rgba(185,28,28,0.15)',
-                          transition: 'transform 0.15s',
+                          width: 32, height: 32, borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)',
+                          background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer', color: '#EF4444', flexShrink: 0, transition: 'all 0.2s ease',
                         }}
-                          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
-                          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         ><Trash2 size={14} /></button>
                       )}
                     </div>
@@ -614,101 +588,97 @@ export default function SplitPDF() {
                   onClick={addRange}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '10px 20px', borderRadius: 14, border: 'none',
-                    background: 'rgba(255,255,255,0.9)', color: '#6D28D9', fontWeight: 700,
-                    fontSize: '0.82rem', cursor: 'pointer', boxShadow: S.back,
-                    transition: 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+                    padding: '10px 20px', borderRadius: 8,
+                    border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.06)',
+                    color: '#E4E4E7', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer',
+                    transition: 'all 0.2s ease',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                  onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
                 >
                   <Plus size={15} /> Add Another Range
                 </button>
               </div>
             )}
 
-            {/* ── EXTRACT-ALL MODE ─────────────────────────────── */}
+            {/* ── EVERY PAGE MODE ──────────────────────────────── */}
             {splitMode === 'all' && (
               <div style={{
-                borderRadius: 28, padding: '28px 24px', background: 'linear-gradient(145deg, #F5F3FF, #EDE9FE)',
-                boxShadow: S.out, marginBottom: 22, textAlign: 'center',
+                borderRadius: 14, padding: '28px 24px',
+                backgroundColor: '#1C1D21',
+                backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+                marginBottom: 22, textAlign: 'center',
               }}>
-                <div style={{
-                  width: 72, height: 72, borderRadius: 22, margin: '0 auto 16px',
-                  background: '#DDD6FE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem',
-                  boxShadow: S.sm,
-                }}>📑</div>
-                <h3 style={{ fontWeight: 900, color: '#3B0764', fontSize: '1.2rem', margin: '0 0 8px' }}>
+                <div style={{ width: 52, height: 52, borderRadius: 14, margin: '0 auto 16px', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Copy size={22} color="#818CF8" />
+                </div>
+                <h3 style={{ fontWeight: 800, color: 'white', fontSize: '1.2rem', margin: '0 0 8px' }}>
                   Split every page individually
                 </h3>
-                <p style={{ color: '#7C3AED', fontSize: '0.88rem', margin: '0 0 12px', fontWeight: 500 }}>
-                  This will produce <strong>{pageCount} separate PDF files</strong>, one for each page.
+                <p style={{ color: '#A1A1AA', fontSize: '0.88rem', margin: '0 0 12px', fontWeight: 500 }}>
+                  This will produce <strong style={{ color: '#C7D2FE' }}>{pageCount} separate PDF files</strong>, one for each page.
                 </p>
-                <div style={{ display: 'inline-flex', gap: 8, padding: '8px 18px', borderRadius: 14, background: 'rgba(255,255,255,0.7)', boxShadow: 'inset 0 2px 6px rgba(109,40,217,0.08)' }}>
+                <div style={{ display: 'inline-flex', gap: 8, padding: '8px 18px', borderRadius: 10, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)' }}>
                   {Array.from({ length: Math.min(pageCount, 5) }, (_, i) => (
-                    <span key={i} style={{ fontSize: '0.72rem', fontWeight: 700, color: '#5B21B6', padding: '3px 8px', borderRadius: 8, background: '#EDE9FE' }}>
+                    <span key={i} style={{ fontSize: '0.72rem', fontWeight: 700, color: '#818CF8', padding: '3px 8px', borderRadius: 6, background: 'rgba(99,102,241,0.12)' }}>
                       p.{i + 1}.pdf
                     </span>
                   ))}
-                  {pageCount > 5 && <span style={{ fontSize: '0.72rem', color: '#7C3AED', alignSelf: 'center' }}>…+{pageCount - 5} more</span>}
+                  {pageCount > 5 && <span style={{ fontSize: '0.72rem', color: '#71717A', alignSelf: 'center' }}>+{pageCount - 5} more</span>}
                 </div>
               </div>
             )}
 
-            {/* ── Processing / Split button ─────────────────────── */}
-            {processing ? (
-              <div style={{
-                borderRadius: 24, padding: '24px 24px', background: 'linear-gradient(145deg, #EDE9FE, #DDD6FE)',
-                boxShadow: S.card, marginBottom: 22,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-                  <Loader2 size={28} color="#7C3AED" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
-                  <div>
-                    <p style={{ fontWeight: 800, color: '#3B0764', margin: '0 0 2px' }}>Splitting your PDF…</p>
-                    <p style={{ color: '#7C3AED', fontSize: '0.8rem', margin: 0 }}>Processing {buildRanges().length} output file{buildRanges().length !== 1 ? 's' : ''}</p>
-                  </div>
+            {/* ── Processing state (always in DOM) ─────────────── */}
+            <div style={{
+              borderRadius: 14, padding: '24px',
+              backgroundColor: '#1C1D21', border: '1px solid rgba(255,255,255,0.06)',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+              marginBottom: 22,
+              opacity: processing ? 1 : 0,
+              pointerEvents: processing ? 'auto' : 'none',
+              maxHeight: processing ? 120 : 0,
+              overflow: 'hidden',
+              transition: 'opacity 0.2s ease, max-height 0.3s ease',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
+                <Loader2 size={22} color="#818CF8" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                <div>
+                  <p style={{ fontWeight: 700, color: 'white', margin: '0 0 2px' }}>Splitting your PDF…</p>
+                  <p style={{ color: '#A1A1AA', fontSize: '0.8rem', margin: 0 }}>Processing {buildRanges().length} output file{buildRanges().length !== 1 ? 's' : ''}</p>
                 </div>
-                {/* Progress bar */}
-                <div style={{ height: 10, borderRadius: 999, background: 'rgba(255,255,255,0.6)', overflow: 'hidden', boxShadow: 'inset 0 2px 6px rgba(109,40,217,0.12)' }}>
-                  <div style={{
-                    height: '100%', borderRadius: 999,
-                    background: 'linear-gradient(90deg, #8B5CF6, #6D28D9)',
-                    width: `${progress}%`,
-                    transition: 'width 0.4s cubic-bezier(0.34,1.2,0.64,1)',
-                    boxShadow: '0 0 10px rgba(124,58,237,0.5)',
-                  }} />
-                </div>
-                <p style={{ textAlign: 'right', fontSize: '0.75rem', color: '#7C3AED', fontWeight: 700, marginTop: 6 }}>{progress}%</p>
               </div>
-            ) : (
-              !isSuccess && (
-                <button
+              <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 999,
+                  background: 'linear-gradient(90deg, #4338CA, #818CF8)',
+                  width: `${progress}%`,
+                  transition: 'width 0.4s ease',
+                }} />
+              </div>
+              <p style={{ textAlign: 'right', fontSize: '0.75rem', color: '#818CF8', fontWeight: 600, marginTop: 4 }}>{progress}%</p>
+            </div>
+
+            {/* ── Action button ────────────────────────────────── */}
+            {!processing && (
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <MotionButton
                   onClick={handleSplit}
                   disabled={!rangesValid}
-                  style={{
-                    width: '100%', padding: '16px 20px', borderRadius: 20, border: 'none',
-                    background: rangesValid ? 'linear-gradient(135deg, #8B5CF6, #6D28D9)' : '#C4B5FD',
-                    color: 'white', fontWeight: 900, fontSize: '1.1rem', cursor: rangesValid ? 'pointer' : 'not-allowed',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                    boxShadow: rangesValid ? S.btn : 'none',
-                    transition: 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
-                  }}
-                  onMouseEnter={e => rangesValid && (e.currentTarget.style.transform = 'translateY(-4px)')}
-                  onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
-                >
-                  <Scissors size={22} />
-                  {splitMode === 'all'
-                    ? `Split into ${pageCount} Files`
-                    : splitMode === 'visual'
-                    ? `Extract ${selectedPages.size} Page${selectedPages.size !== 1 ? 's' : ''}`
-                    : `Split into ${ranges.length} File${ranges.length !== 1 ? 's' : ''}`}
-                </button>
-              )
+                  label={splitLabel}
+                  classes="shadow-[0_4px_14px_rgba(99,102,241,0.35)]"
+                />
+              </div>
             )}
           </>
         )}
       </div>
 
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }

@@ -72,32 +72,26 @@ export const DownloadButton = ({
       return;
     }
 
-    if (result === false) {
-      safeSetStatus('idle');
-      return;
-    }
-
     const elapsed = Date.now() - startTime;
     const remainingForSuccess = Math.max(0, 1500 - elapsed);
 
     const browserHandled =
       result === SAVE_RESULT_BROWSER || result === undefined;
 
-    if (browserHandled) {
-      const quickTail = Math.max(0, 400 - elapsed);
-      schedule(() => safeSetStatus('idle'), quickTail);
-      return;
-    }
-
-    if (result !== true) {
+    if (result === false) {
       safeSetStatus('idle');
       return;
     }
 
+    // Both confirmed saves (true) and browser-handled anchor downloads show "Downloaded!"
+    const delay = browserHandled
+      ? Math.max(0, 400 - elapsed)   // anchor is instant; short loading feel
+      : remainingForSuccess;          // picker: wait out the 1.5 s minimum
+
     schedule(() => {
       safeSetStatus('done');
       schedule(() => safeSetStatus('idle'), 2500);
-    }, remainingForSuccess);
+    }, delay);
   };
 
   const isLoading = status === 'loading';
@@ -118,13 +112,14 @@ export const DownloadButton = ({
         onClick={handleDownloadClick}
         disabled={disabled || isLoading || isDone}
         initial={false}
-        animate={{ width: isLoading ? 56 : 220 }}
+        animate={{ maxWidth: isLoading ? 56 : 280 }}
         transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
         style={{
           position: 'relative',
+          width: '100%',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'flex-start',
           border: `2px solid ${isDone ? '#22C55E' : '#3B82F6'}`,
           borderRadius: '9999px',
           overflow: 'hidden',

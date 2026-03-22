@@ -87,8 +87,8 @@ export function HeroDitheringCard({
           style={{
             position: 'relative',
             zIndex: 10,
-            padding: '48px 28px',
-            maxWidth: 560,
+            padding: '32px 20px',
+            maxWidth: 480,
             width: '100%',
             margin: '0 auto',
             textAlign: 'center',
