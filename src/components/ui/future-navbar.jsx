@@ -74,9 +74,9 @@ function FutureButton({
         border: 'none',
         background: 'transparent',
         fontWeight: 'bold',
-        marginBottom: '0.5rem',
+        marginBottom: '0.6rem',
         position: 'relative',
-        padding: shape === "simple" ? "0.5rem 1.5rem 0.5rem 2rem" : "0.5rem 2rem",
+        padding: shape === "simple" ? "0.6rem 1.5rem 0.6rem 2rem" : "0.6rem 2rem",
         cursor: 'pointer',
         transition: 'all 0.2s',
         outline: 'none',
@@ -84,7 +84,7 @@ function FutureButton({
       }}
       className={`group ${className || ""}`}
     >
-      <div style={{ position: 'absolute', inset: 0, marginBottom: '-0.5rem' }}>
+      <div style={{ position: 'absolute', inset: 0, marginBottom: '-0.6rem' }}>
         {!customPaths && (shape === "default" || shape === "flat") && (
           <Frame
             enableBackdropBlur={enableBackdropBlur}
@@ -181,7 +181,7 @@ export default function FutureNavbar() {
       {/* Mini-stylesheet to substitute Tailwind classes safely */}
       <style>{`
         .fn-container {
-          height: 4rem; margin-top: 0.5rem; margin-left: 0.5rem; margin-right: 0.5rem;
+          height: 4.8rem; margin-top: 0.6rem; margin-left: 0.5rem; margin-right: 0.5rem;
           display: flex; width: calc(100% - 1rem); position: fixed; top: 0; left: 0; right: 0; z-index: 100;
           backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
         }
@@ -246,7 +246,7 @@ export default function FutureNavbar() {
               ]}
             />
             
-            <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.625rem', position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.75rem', position: 'relative' }}>
               <Link to="/" style={{ marginRight: '4rem', fontWeight: 'bold', textDecoration: 'none', color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#e2e8f0', letterSpacing: '-0.02em', textShadow: '0 0 10px rgba(255,255,255,0.3)' }}>&lt;/IHatePDF&gt;</span>
               </Link>
@@ -285,9 +285,9 @@ export default function FutureNavbar() {
                 }
               ]}
             />
-            <div style={{ display: 'flex', alignItems: 'center', marginTop: '-0.875rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginTop: '-1.05rem' }}>
               <a href="#workflow" style={{ textDecoration: 'none' }}>
-                <FutureButton shape="flat" style={{ padding: '0.45rem 2.25rem', fontSize: '0.75rem', fontWeight: 'normal', color: 'white' }}>
+                <FutureButton shape="flat" style={{ padding: '0.54rem 2.25rem', fontSize: '0.75rem', fontWeight: 'normal', color: 'white' }}>
                   <div style={{ display: 'flex', gap: '2.5rem' }}>
                     <span>Workflow</span>
                     <span>→</span>
@@ -295,8 +295,8 @@ export default function FutureNavbar() {
                 </FutureButton>
               </a>
               <a target="_blank" href="https://github.com/Sarthak-Sahu-1409/ihatepdf" style={{ marginLeft: '4px', textDecoration: 'none' }}>
-                <FutureButton shape="flat" style={{ padding: '0.45rem 1.5rem' }}>
-                  <Github size={16} />
+                <FutureButton shape="flat" style={{ padding: '0.54rem 1.5rem' }}>
+                  <Github size={19} />
                 </FutureButton>
               </a>
             </div>

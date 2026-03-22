@@ -151,7 +151,7 @@ export default function Landing() {
       {/* ── Navbar ─────────────────────────────── */}
       <FutureNavbar />
       {/* ── Hero ───────────────────────────────── */}
-      <section style={{ paddingTop: '80px', paddingBottom: '16px', paddingLeft: '24px', paddingRight: '24px' }}>
+      <section style={{ paddingTop: 'calc(80px + 0.9rem)', paddingBottom: '16px', paddingLeft: '24px', paddingRight: '24px' }}>
         <div style={{ maxWidth: '896px', margin: '0 auto', textAlign: 'center' }}>
           <h1
             style={{
