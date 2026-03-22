@@ -6,6 +6,7 @@ import {
 import { UploadCard } from '../components/ui/upload-ui';
 import { DownloadButton } from '../components/ui/download-animation';
 import { saveBlobToDisk } from '../utils/saveBlobToDisk';
+import { useWorker } from '../hooks/useWorker';
 import MotionButton from '../components/ui/motion-button';
 import { HeroDitheringCard } from '../components/ui/hero-dithering-card';
 import formatFileSize from '../utils/formatFileSize';
@@ -29,8 +30,6 @@ export default function JPGtoPDF() {
 
   const [outputName, setOutputName] = useState('images');
 
-  const [processing, setProcessing] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [currentImg, setCurrentImg] = useState(0);
   const [error, setError] = useState(null);
 
@@ -38,6 +37,9 @@ export default function JPGtoPDF() {
   const [resultBlob, setResultBlob] = useState(null);
 
   const fileInputRef = useRef(null);
+
+  // Web Worker for off-main-thread conversion
+  const { run: runWorker, progress, running: processing } = useWorker('image');
 
   const darkCard = {
     borderRadius: 16,
@@ -101,73 +103,35 @@ export default function JPGtoPDF() {
     setDragIndex(null); setDropTarget(null);
   };
 
-  const toJpegBytes = async (file) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.src = url;
-    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    canvas.getContext('2d').drawImage(img, 0, 0);
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', JPEG_QUALITY));
-    const bytes = await blob.arrayBuffer();
-    URL.revokeObjectURL(url);
-    canvas.width = 0; canvas.height = 0;
-    return { bytes, width: img.naturalWidth, height: img.naturalHeight };
-  };
-
+  /* ── convert (runs in Web Worker) ────────────────────── */
   const handleConvert = async () => {
     if (!images.length) return;
-    setProcessing(true);
-    setProgress(0);
     setCurrentImg(0);
     setError(null);
 
     try {
-      const { PDFDocument, rgb } = await import('pdf-lib');
-      const { isLargeFile, processLargeFile } = await import('../utils/streamProcessor');
-      const pdfDoc = await PDFDocument.create();
+      // Read all image files into ArrayBuffers for the worker
+      const imageData = await Promise.all(
+        images.map(async (img) => {
+          const buffer = await img.file.arrayBuffer();
+          return {
+            buffer,
+            fileName: img.file.name,
+            mimeType: img.file.type,
+          };
+        })
+      );
 
-      for (let i = 0; i < images.length; i++) {
-        setCurrentImg(i + 1);
-        const { file } = images[i];
-        const isJpeg = file.type === 'image/jpeg' || /\.(jpe?g)$/i.test(file.name);
-        const isPng = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
-        const needsConvert = !isJpeg && !isPng;
+      // Collect transferables (the buffers)
+      const transferables = imageData.map((d) => d.buffer);
 
-        let embeddedImage;
-        let imgW;
-        let imgH;
+      const result = await runWorker('jpgToPdf', { images: imageData }, transferables);
 
-        if (needsConvert) {
-          const { bytes, width, height } = await toJpegBytes(file);
-          embeddedImage = await pdfDoc.embedJpg(bytes);
-          imgW = width; imgH = height;
-        } else {
-          const buf = isLargeFile(file) ? await processLargeFile(file) : await file.arrayBuffer();
-          embeddedImage = isJpeg ? await pdfDoc.embedJpg(buf) : await pdfDoc.embedPng(buf);
-          imgW = embeddedImage.width;
-          imgH = embeddedImage.height;
-        }
-
-        const page = pdfDoc.addPage([imgW, imgH]);
-        page.drawRectangle({ x: 0, y: 0, width: imgW, height: imgH, color: rgb(1, 1, 1) });
-        page.drawImage(embeddedImage, { x: 0, y: 0, width: imgW, height: imgH });
-
-        setProgress(Math.round(((i + 1) / images.length) * 92));
-        await new Promise((r) => setTimeout(r, 0));
-      }
-
-      const bytes = await pdfDoc.save();
-      setProgress(100);
-      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const blob = new Blob([result.data], { type: 'application/pdf' });
       setResultBlob(blob);
       setIsSuccess(true);
     } catch (err) {
       setError(`Conversion failed: ${err.message}`);
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -180,7 +144,7 @@ export default function JPGtoPDF() {
   const handleReset = () => {
     images.forEach(i => URL.revokeObjectURL(i.objectUrl));
     setImages([]); setIsSuccess(false); setResultBlob(null);
-    setProgress(0); setError(null);
+    setError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 

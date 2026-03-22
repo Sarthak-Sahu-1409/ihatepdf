@@ -6,6 +6,7 @@ import { UploadCard } from '../components/ui/upload-ui';
 import { DownloadButton } from '../components/ui/download-animation';
 import MotionButton from '../components/ui/motion-button';
 import { saveBlobToDisk } from '../utils/saveBlobToDisk';
+import { useWorker } from '../hooks/useWorker';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 /* ────────────────────────────────────────────────────────────────
@@ -31,14 +32,15 @@ export default function MergePDF() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [dragIndex, setDragIndex] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
-  const [processing, setProcessing] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
   const [mergedPdfBlob, setMergedPdfBlob] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const fileInputRef = useRef(null);
   const addMoreInputRef = useRef(null);
+
+  // Web Worker for off-main-thread merging
+  const { run: runWorker, progress, running: processing, cancel: cancelWorker } = useWorker('pdf');
 
   /* ── robust PDF file loading (3-attempt strategy) ──────── */
   const handleFilesAdded = useCallback(async (fileList) => {
@@ -267,7 +269,7 @@ export default function MergePDF() {
   const removeFile = (id) =>
     setPdfFiles((prev) => prev.filter((f) => f.id !== id));
 
-  /* ── merge ──────────────────────────────────────────────── */
+  /* ── merge (runs in Web Worker) ─────────────────────────── */
   const handleMerge = async () => {
     const mergeableFiles = pdfFiles.filter(
       (f) => !f.error && f.selectedPages.size > 0
@@ -277,43 +279,27 @@ export default function MergePDF() {
       return;
     }
 
-    setProcessing(true);
-    setProgress(0);
     setError(null);
 
     try {
-      const { PDFDocument } = await import('pdf-lib');
-      const mergedPdf = await PDFDocument.create();
-
-      const totalPages = mergeableFiles.reduce(
-        (sum, f) => sum + f.selectedPages.size,
-        0
-      );
-      let processedPages = 0;
-
-      for (const pdfFile of mergeableFiles) {
-        const srcDoc = await PDFDocument.load(pdfFile.arrayBuffer);
-        const selectedPageIndices = Array.from(pdfFile.selectedPages)
+      // Prepare data for the worker — copy ArrayBuffers so originals stay intact
+      const files = mergeableFiles.map((f) => ({
+        buffer: f.arrayBuffer.slice(0),
+        selectedPageIndices: Array.from(f.selectedPages)
           .sort((a, b) => a - b)
-          .map((n) => n - 1);
+          .map((n) => n - 1),
+      }));
 
-        const copiedPages = await mergedPdf.copyPages(srcDoc, selectedPageIndices);
-        copiedPages.forEach((page) => mergedPdf.addPage(page));
+      // Collect transferables (the copied buffers)
+      const transferables = files.map((f) => f.buffer);
 
-        processedPages += selectedPageIndices.length;
-        setProgress(Math.round((processedPages / totalPages) * 90));
-      }
+      const result = await runWorker('merge', { files }, transferables);
 
-      const mergedBytes = await mergedPdf.save();
-      setProgress(100);
-
-      const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+      const blob = new Blob([result.data], { type: 'application/pdf' });
       setMergedPdfBlob(blob);
       setIsSuccess(true);
     } catch (err) {
       setError(`Merge failed: ${err.message}. Try with smaller files.`);
-    } finally {
-      setProcessing(false);
     }
   };
 

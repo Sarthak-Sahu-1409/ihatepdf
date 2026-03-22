@@ -8,7 +8,6 @@ import {
 import { UploadCard } from '../components/ui/upload-ui';
 import { DownloadButton } from '../components/ui/download-animation';
 import { saveBlobToDisk, SAVE_RESULT_BROWSER } from '../utils/saveBlobToDisk';
-import { useWorker } from '../hooks/useWorker';
 import MotionButton from '../components/ui/motion-button';
 import { HeroDitheringCard } from '../components/ui/hero-dithering-card';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -28,33 +27,32 @@ const OUTPUT_SCALE = 1.5;
    PDF to JPG PAGE
    ════════════════════════════════════════════════════════════ */
 export default function PDFtoJPG() {
-  /* ── file ───────────────────────────────────────────────── */
+  /* ── file ─────────────────────────────────────────────────── */
   const [pdfFile, setPdfFile]       = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [pageCount, setPageCount]   = useState(0);
   const [thumbnail, setThumbnail]   = useState(null);
 
-  /* ── settings ───────────────────────────────────────────── */
+  /* ── settings ─────────────────────────────────────────────── */
   const [quality, setQuality]             = useState(0.9);
   const [pageRangeMode, setPageRangeMode] = useState('all');
   const [fromPage, setFromPage]           = useState(1);
   const [toPage, setToPage]               = useState(1);
 
-  /* ── processing ─────────────────────────────────────────── */
+  /* ── processing ───────────────────────────────────────────── */
+  const [processing, setProcessing]         = useState(false);
+  const [progress, setProgress]             = useState(0);
   const [currentPage, setCurrentPage]       = useState(0);
   const [completedThumbs, setCompletedThumbs] = useState([]);
   const [error, setError]                   = useState(null);
 
-  /* ── success ──────────────────────────────────────────── */
+  /* ── success ──────────────────────────────────────────────── */
   const [isSuccess, setIsSuccess]       = useState(false);
   const [outputImages, setOutputImages] = useState([]);
   const [lightboxImage, setLightboxImage] = useState(null);
 
   const fileInputRef = useRef(null);
   const pdfDocRef    = useRef(null);
-
-  // Web Worker for off-main-thread conversion
-  const { run: runWorker, progress, running: processing } = useWorker('image');
 
   /* ── computed ─────────────────────────────────────────────── */
   const getPageCountToConvert = () =>
@@ -102,52 +100,66 @@ export default function PDFtoJPG() {
     if (file) handleFileLoad(file);
   };
 
-  /* ── convert (runs in Web Worker) ────────────────────── */
+  /* ── convert ──────────────────────────────────────────────── */
   const handleConvert = async () => {
     if (!pdfFile) return;
+    setProcessing(true);
+    setProgress(0);
     setCurrentPage(0);
     setCompletedThumbs([]);
     setError(null);
 
     try {
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
+
       const { isLargeFile, processLargeFile } = await import('../utils/streamProcessor');
       const arrayBuffer = isLargeFile(pdfFile)
         ? await processLargeFile(pdfFile)
         : await pdfFile.arrayBuffer();
 
+      const doc = await pdfjsLib.getDocument({ data: arrayBuffer, verbosity: 0 }).promise;
       const startPage = pageRangeMode === 'all' ? 1 : fromPage;
       const endPage   = pageRangeMode === 'all' ? pageCount : toPage;
+      const total = endPage - startPage + 1;
       const baseName = pdfFile.name.replace(/\.pdf$/i, '');
+      const outputs = [];
 
-      const bufferCopy = arrayBuffer.slice(0);
-      const result = await runWorker(
-        'pdfToJpg',
-        { buffer: bufferCopy, quality, startPage, endPage, outputScale: OUTPUT_SCALE },
-        [bufferCopy]
-      );
+      for (let i = startPage; i <= endPage; i++) {
+        setCurrentPage(i - startPage + 1);
+        const page = await doc.getPage(i);
+        const viewport = page.getViewport({ scale: OUTPUT_SCALE });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
 
-      // Convert worker's ArrayBuffer results to Blob URLs for display
-      const outputs = result.data.map((item) => {
-        const blob = new Blob([item.jpegBuffer], { type: 'image/jpeg' });
-        const thumbBlob = new Blob([item.thumbBuffer], { type: 'image/jpeg' });
-        const dataUrl = URL.createObjectURL(blob);
-        const thumbUrl = URL.createObjectURL(thumbBlob);
-        return {
-          dataUrl,
-          thumbUrl,
-          blob,
-          pageNum: item.pageNum,
-          width: item.width,
-          height: item.height,
-          filename: `${baseName}_page_${item.pageNum}.jpg`,
-        };
-      });
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        const blob = await new Promise(resolve =>
+          canvas.toBlob(resolve, 'image/jpeg', quality)
+        );
+
+        outputs.push({
+          dataUrl, blob,
+          pageNum: i,
+          width: Math.round(viewport.width),
+          height: Math.round(viewport.height),
+          filename: `${baseName}_page_${i}.jpg`,
+        });
+
+        setCompletedThumbs(prev => [...prev, dataUrl]);
+        setProgress(Math.round(((i - startPage + 1) / total) * 100));
+        canvas.width = 0; canvas.height = 0;
+
+        await new Promise((r) => setTimeout(r, 0));
+      }
 
       setOutputImages(outputs);
-      setCompletedThumbs(outputs.map((o) => o.thumbUrl));
       setIsSuccess(true);
     } catch (err) {
       setError(`Conversion failed: ${err.message}`);
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -172,15 +184,7 @@ export default function PDFtoJPG() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleReset = () => {
-    handleRemoveFile();
-    setLightboxImage(null);
-    // Revoke any blob URLs
-    outputImages.forEach((img) => {
-      if (img.dataUrl?.startsWith('blob:')) URL.revokeObjectURL(img.dataUrl);
-      if (img.thumbUrl?.startsWith('blob:')) URL.revokeObjectURL(img.thumbUrl);
-    });
-  };
+  const handleReset = () => { handleRemoveFile(); setProgress(0); setLightboxImage(null); };
 
   /** One rhythm for vertical stack, grids, and sibling controls (px). */
   const LAYOUT_GAP = 16;

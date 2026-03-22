@@ -8,6 +8,7 @@ import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { UploadCard } from '../components/ui/upload-ui';
 import { DownloadButton } from '../components/ui/download-animation';
 import { saveBlobToDisk } from '../utils/saveBlobToDisk';
+import { useWorker } from '../hooks/useWorker';
 import MotionButton from '../components/ui/motion-button';
 import { HeroDitheringCard } from '../components/ui/hero-dithering-card';
 import formatFileSize from '../utils/formatFileSize';
@@ -65,11 +66,12 @@ export default function SignPDF() {
   const pageCanvasRef  = useRef(null);
   const previewContRef = useRef(null);
 
-  const [processing, setProcessing] = useState(false);
-  const [progress, setProgress]     = useState(0);
   const [error, setError]           = useState(null);
   const [isSuccess, setIsSuccess]   = useState(false);
   const [signedBlob, setSignedBlob] = useState(null);
+
+  // Web Worker for off-main-thread signing
+  const { run: runWorker, progress, running: processing } = useWorker('pdf');
 
   const [activePlaced, setActivePlaced] = useState(null);
   const [placedDragOff, setPlacedDragOff] = useState({ x: 0, y: 0 });
@@ -245,35 +247,38 @@ export default function SignPDF() {
 
   const handleApplyAll = async () => {
     if (!pdfFile || placed.length === 0) return;
-    setProcessing(true); setProgress(0); setError(null);
+    setError(null);
     try {
-      const { PDFDocument } = await import('pdf-lib');
-      const { isLargeFile, processLargeFile } = await import('../utils/streamProcessor');
-      const ab = isLargeFile(pdfFile) ? await processLargeFile(pdfFile) : await pdfFile.arrayBuffer();
-      setProgress(20);
-      const pdfDoc = await PDFDocument.load(ab, { ignoreEncryption: true });
-      const pages = pdfDoc.getPages();
-      setProgress(35);
-
-      for (let i = 0; i < placed.length; i++) {
-        const item = placed[i];
-        const base64 = item.sigDataUrl.replace(/^data:image\/png;base64,/, '');
-        const sigBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-        const sigImage = await pdfDoc.embedPng(sigBytes);
+      // Step 1: Compute coordinates on main thread (requires pdfjs DOM access)
+      const sigData = [];
+      for (const item of placed) {
         const coords = await getPdfCoords(item);
-        pages[coords.page - 1].drawImage(sigImage, {
-          x: coords.x, y: coords.y, width: coords.width, height: coords.height, opacity: coords.opacity,
+        const base64 = item.sigDataUrl.replace(/^data:image\/png;base64,/, '');
+        const pngBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        sigData.push({
+          pngBytes,
+          pageIndex: coords.page - 1,
+          x: coords.x,
+          y: coords.y,
+          width: coords.width,
+          height: coords.height,
+          opacity: coords.opacity,
         });
-        setProgress(35 + Math.round(((i + 1) / placed.length) * 55));
-        await new Promise((r) => setTimeout(r, 0));
       }
 
-      const bytes = await pdfDoc.save({ useObjectStreams: true });
-      const blob = new Blob([bytes], { type: 'application/pdf' });
+      // Step 2: Read PDF buffer
+      const { isLargeFile, processLargeFile } = await import('../utils/streamProcessor');
+      const buffer = isLargeFile(pdfFile) ? await processLargeFile(pdfFile) : await pdfFile.arrayBuffer();
+      const bufferCopy = buffer.slice(0);
+
+      // Step 3: Send to worker for embedding + saving
+      const transferables = [bufferCopy, ...sigData.map(s => s.pngBytes.buffer)];
+      const result = await runWorker('sign', { buffer: bufferCopy, signatures: sigData }, transferables);
+
+      const blob = new Blob([result.data], { type: 'application/pdf' });
       setSignedBlob(blob);
-      setProgress(100); setIsSuccess(true);
+      setIsSuccess(true);
     } catch (e) { setError(`Signing failed: ${e.message}`); }
-    finally { setProcessing(false); }
   };
 
   const handleDownload = async () => {
@@ -285,7 +290,7 @@ export default function SignPDF() {
   const handleReset = () => {
     setPdfFile(null); setPdfThumb(null); setPageCount(0); setSigDataUrl(null);
     setDrawnSig(null); setUploadPreview(null); setIsSuccess(false); setError(null);
-    setSignedBlob(null); pdfDocRef.current = null; setProgress(0);
+    setSignedBlob(null); pdfDocRef.current = null;
     setPlaced([]); setSigPos({ x: 30, y: 60 }); setSigSize(25); setSigOpacity(1.0);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };

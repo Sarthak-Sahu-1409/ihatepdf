@@ -14,6 +14,7 @@
     "@fontsource/pacifico": "^5.2.7",
     "@fontsource/pinyon-script": "^5.2.8",
     "@fontsource/satisfy": "^5.2.7",
+    "@jsquash/jpeg": "^1.6.0",
     "@left4code/svg-renderer": "^1.0.4",
     "@paper-design/shaders": "^0.0.72",
     "@paper-design/shaders-react": "^0.0.72",

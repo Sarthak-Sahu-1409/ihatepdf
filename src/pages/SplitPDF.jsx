@@ -13,6 +13,7 @@ import {
   saveBlobViaAnchor,
   SAVE_RESULT_BROWSER,
 } from '../utils/saveBlobToDisk';
+import { useWorker } from '../hooks/useWorker';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 /* ─── helpers ─────────────────────────────────────────── */
@@ -43,16 +44,17 @@ export default function SplitPDF() {
   /* ─── range mode ──────────────────────────────────────── */
   const [ranges, setRanges] = useState([{ from: 1, to: 1 }]);
 
-  /* ─── processing ─────────────────────────────────────── */
-  const [processing, setProcessing] = useState(false);
-  const [progress, setProgress]     = useState(0);
+  /* ─── processing ───────────────────────────────── */
   const [error, setError]           = useState(null);
 
-  /* ─── results ────────────────────────────────────────── */
+  /* ─── results ────────────────────────────────── */
   const [outputs, setOutputs]   = useState([]);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const fileInputRef = useRef(null);
+
+  // Web Worker for off-main-thread splitting
+  const { run: runWorker, progress, running: processing } = useWorker('pdf');
 
   /* ─── load PDF ────────────────────────────────────────── */
   const loadPdf = useCallback(async (file) => {
@@ -151,45 +153,41 @@ export default function SplitPDF() {
     return ranges.filter(r => r.from >= 1 && r.to >= r.from && r.to <= pageCount);
   };
 
-  /* ─── split ───────────────────────────────────────────── */
+  /* ─── split (runs in Web Worker) ───────────────────── */
   const handleSplit = async () => {
     const rngList = buildRanges();
     if (!rngList.length) { setError('No valid ranges — please select pages or configure ranges.'); return; }
     if (!arrayBuffer) return;
 
-    setProcessing(true);
-    setProgress(0);
     setError(null);
 
     try {
-      const { PDFDocument } = await import('pdf-lib');
-      let buf = arrayBuffer;
       const { isLargeFile, processLargeFile } = await import('../utils/streamProcessor');
+      let buf = arrayBuffer;
       if (isLargeFile(pdfFile)) buf = await processLargeFile(pdfFile);
 
-      const srcDoc = await PDFDocument.load(buf, { ignoreEncryption: true, updateMetadata: false });
       const baseName = pdfFile.name.replace(/\.pdf$/i, '');
-      const results = [];
+      const bufferCopy = buf.slice(0);
 
-      for (let i = 0; i < rngList.length; i++) {
-        const { from, to } = rngList[i];
-        const newDoc = await PDFDocument.create();
-        const indices = Array.from({ length: to - from + 1 }, (_, k) => from - 1 + k);
-        const pages = await newDoc.copyPages(srcDoc, indices);
-        pages.forEach(p => newDoc.addPage(p));
-        const bytes = await newDoc.save();
-        const blob = new Blob([bytes], { type: 'application/pdf' });
-        results.push({ name: `${baseName}_pages_${from}-${to}.pdf`, blob, size: bytes.byteLength, from, to });
-        setProgress(Math.round(((i + 1) / rngList.length) * 95));
-      }
+      const result = await runWorker(
+        'split',
+        { buffer: bufferCopy, ranges: rngList },
+        [bufferCopy]
+      );
 
-      setProgress(100);
+      // Convert ArrayBuffer results to Blobs
+      const results = result.data.map((item) => ({
+        name: `${baseName}_pages_${item.from}-${item.to}.pdf`,
+        blob: new Blob([item.bytes], { type: 'application/pdf' }),
+        size: item.size,
+        from: item.from,
+        to: item.to,
+      }));
+
       setOutputs(results);
       setIsSuccess(true);
     } catch (err) {
       setError(`Split failed: ${err.message}`);
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -205,12 +203,12 @@ export default function SplitPDF() {
     return SAVE_RESULT_BROWSER;
   };
 
-  /* ─── reset ───────────────────────────────────────────── */
+  /* ─── reset ─────────────────────────────────────── */
   const handleReset = () => {
     setPdfFile(null); setArrayBuffer(null); setPageCount(0);
     setThumbnails([]); setSelectedPages(new Set());
     setRanges([{ from: 1, to: 1 }]); setOutputs([]);
-    setIsSuccess(false); setProgress(0); setError(null);
+    setIsSuccess(false); setError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 

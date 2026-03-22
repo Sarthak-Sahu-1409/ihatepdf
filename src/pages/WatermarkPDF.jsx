@@ -8,6 +8,7 @@ import {
 import { UploadCard } from '../components/ui/upload-ui';
 import { DownloadButton } from '../components/ui/download-animation';
 import { saveBlobToDisk } from '../utils/saveBlobToDisk';
+import { useWorker } from '../hooks/useWorker';
 import MotionButton from '../components/ui/motion-button';
 import { HeroDitheringCard } from '../components/ui/hero-dithering-card';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -122,11 +123,12 @@ export default function WatermarkPDF() {
   const pdfJsDocRef         = useRef(null);
   const renderedPageDataRef = useRef(null);
 
-  /* ── Processing ─────────────────────────────────────────── */
-  const [processing, setProcessing]   = useState(false);
-  const [progress, setProgress]       = useState(0);
+  /* ── Processing ─────────────────────────────────────── */
   const [currentPage, setCurrentPage] = useState(0);
   const [error, setError]             = useState(null);
+
+  // Web Worker for off-main-thread watermarking
+  const { run: runWorker, progress, running: processing } = useWorker('pdf');
 
   /* ── Success ────────────────────────────────────────────── */
   const [isSuccess, setIsSuccess]   = useState(false);
@@ -332,99 +334,52 @@ export default function WatermarkPDF() {
     setWmImagePreview(url);
   };
 
-  /* ── Apply watermark via pdf-lib ────────────────────────── */
-  // Input: current pdfFile + all wm settings; Output: sets outputBlob on success
+  /* ── Apply watermark (runs in Web Worker) ──────────── */
   const handleApplyWatermark = async () => {
     if (!pdfFile || !isReadyToApply()) return;
-    setProcessing(true);
-    setProgress(0);
     setCurrentPage(0);
     setError(null);
 
     try {
-      const { PDFDocument, rgb, degrees, StandardFonts } = await import('pdf-lib');
       const { isLargeFile, processLargeFile } = await import('../utils/streamProcessor');
-
       const arrayBuffer = isLargeFile(pdfFile)
         ? await processLargeFile(pdfFile)
         : await pdfFile.arrayBuffer();
 
-      const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-      const pages  = pdfDoc.getPages();
-      const targetIndices = getTargetPageIndices(pages.length);
+      const bufferCopy = arrayBuffer.slice(0);
+      const targetPageIndices = getTargetPageIndices(pageCount);
 
-      let font        = null;
-      let embeddedImg = null;
+      // Build payload for the worker
+      const payload = {
+        buffer: bufferCopy,
+        wmType,
+        wmText,
+        fontSize,
+        wmColor,
+        opacity,
+        imgScalePercent,
+        textRotation: WM_TEXT_ROTATION,
+        layoutPosition: WM_LAYOUT_POSITION,
+        targetPageIndices,
+      };
 
-      if (wmType === 'text') {
-        font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-      } else if (wmType === 'image' && wmImageFile) {
-        const imgBytes = await wmImageFile.arrayBuffer();
-        const isJpeg   = wmImageFile.type === 'image/jpeg' ||
-                         !!wmImageFile.name.toLowerCase().match(/\.(jpg|jpeg)$/);
-        embeddedImg    = isJpeg
-          ? await pdfDoc.embedJpg(imgBytes)
-          : await pdfDoc.embedPng(imgBytes);
+      const transferables = [bufferCopy];
+
+      // If image watermark, read image bytes and send along
+      if (wmType === 'image' && wmImageFile) {
+        const imgBuf = await wmImageFile.arrayBuffer();
+        payload.imageBytes = new Uint8Array(imgBuf);
+        payload.imageMimeType = wmImageFile.type || '';
+        transferables.push(imgBuf);
       }
 
-      const hexToRgb = (hex) => ({
-        r: parseInt(hex.slice(1, 3), 16) / 255,
-        g: parseInt(hex.slice(3, 5), 16) / 255,
-        b: parseInt(hex.slice(5, 7), 16) / 255,
-      });
+      const result = await runWorker('watermark', payload, transferables);
 
-      for (let i = 0; i < targetIndices.length; i++) {
-        const pageIdx = targetIndices[i];
-        setCurrentPage(i + 1);
-        const page = pages[pageIdx];
-        const { width: pageW, height: pageH } = page.getSize();
-
-        if (wmType === 'text' && font) {
-          const textW = font.widthOfTextAtSize(wmText, fontSize);
-          const textH = font.heightAtSize(fontSize);
-          const { cx, cy } = getPdfCenter(pageW, pageH, WM_LAYOUT_POSITION);
-          // pdf-lib uses CCW-positive rotation; canvas preview is CW-positive — negate to match preview.
-          const pdfRot = -WM_TEXT_ROTATION;
-          const { x, y } = rotationAdjustedOrigin(cx, cy, textW, textH, pdfRot);
-          const { r, g, b } = hexToRgb(wmColor);
-
-          page.drawText(wmText, {
-            x, y,
-            size: fontSize,
-            font,
-            color: rgb(r, g, b),
-            opacity,
-            rotate: degrees(pdfRot),
-          });
-
-        } else if (wmType === 'image' && embeddedImg) {
-          const scale  = (pageW * imgScalePercent / 100) / embeddedImg.width;
-          const drawW  = embeddedImg.width  * scale;
-          const drawH  = embeddedImg.height * scale;
-          const { cx, cy } = getPdfCenter(pageW, pageH, WM_LAYOUT_POSITION);
-          // Image watermark: centered, no rotation.
-          const { x, y } = rotationAdjustedOrigin(cx, cy, drawW, drawH, 0);
-
-          page.drawImage(embeddedImg, {
-            x, y,
-            width: drawW, height: drawH,
-            opacity,
-          });
-        }
-
-        setProgress(Math.round(((i + 1) / targetIndices.length) * 100));
-
-        await new Promise((r) => setTimeout(r, 0));
-      }
-
-      const outBytes = await pdfDoc.save({ useObjectStreams: true });
-      const blob     = new Blob([outBytes], { type: 'application/pdf' });
+      const blob = new Blob([result.data], { type: 'application/pdf' });
       setOutputBlob(blob);
       setIsSuccess(true);
     } catch (err) {
       setError(`Watermark failed: ${err.message}`);
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -440,7 +395,6 @@ export default function WatermarkPDF() {
     handleRemoveFile();
     setOutputBlob(null);
     setIsSuccess(false);
-    setProgress(0);
     setWmText('CONFIDENTIAL');
     setFontSize(60);
     setWmColor('#1a1a1a');

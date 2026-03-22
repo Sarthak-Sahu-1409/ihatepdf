@@ -7,6 +7,7 @@ import {
 import { UploadCard } from '../components/ui/upload-ui';
 import { DownloadButton } from '../components/ui/download-animation';
 import { saveBlobToDisk } from '../utils/saveBlobToDisk';
+import { useWorker } from '../hooks/useWorker';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import formatFileSize from '../utils/formatFileSize';
 import MotionButton from '../components/ui/motion-button';
@@ -47,14 +48,15 @@ export default function CompressPDF() {
   const [compressionLevel, setCompressionLevel] = useState('ebook');
   const [thumbnail, setThumbnail] = useState(null);
   const [pageCount, setPageCount] = useState(0);
-  const [processing, setProcessing] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [originalSize, setOriginalSize] = useState(0);
   const [compressedSize, setCompressedSize] = useState(0);
   const [compressedBlob, setCompressedBlob] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Web Worker for off-main-thread compression
+  const { run: runWorker, progress, running: processing } = useWorker('pdf');
 
   const savedPercent =
     originalSize > 0
@@ -114,96 +116,29 @@ export default function CompressPDF() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  /* ── compression logic ────────────────────────────────────── */
-  const LEVEL_CONFIG = {
-    screen:  { scale: 0.75, jpegQuality: 0.30, tryRasterize: true },
-    ebook:   { scale: 1.0,  jpegQuality: 0.50, tryRasterize: true },
-    printer: { scale: 1.5,  jpegQuality: 0.80, tryRasterize: true },
-  };
-
-  const compressMetadataOnly = async (PDFDocument, buffer, stripAll) => {
-    const pdfDoc = await PDFDocument.load(buffer, { ignoreEncryption: true, updateMetadata: false });
-    pdfDoc.setAuthor(''); pdfDoc.setSubject(''); pdfDoc.setKeywords([]);
-    pdfDoc.setCreator(''); pdfDoc.setProducer('');
-    if (stripAll) pdfDoc.setTitle('');
-    const bytes = await pdfDoc.save({ useObjectStreams: true, addDefaultPage: false, objectsPerTick: 50 });
-    return new Blob([bytes], { type: 'application/pdf' });
-  };
-
-  const compressRasterize = async (PDFDocument, buffer, config, onProgress) => {
-    const pdfjsLib = await import('pdfjs-dist');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
-    const srcDoc = await pdfjsLib.getDocument({ data: buffer.slice(0), verbosity: 0 }).promise;
-    const newPdf = await PDFDocument.create();
-    const totalPages = srcDoc.numPages;
-
-    for (let i = 1; i <= totalPages; i++) {
-      const page = await srcDoc.getPage(i);
-      const viewport = page.getViewport({ scale: config.scale });
-      const canvas = document.createElement('canvas');
-      canvas.width = viewport.width; canvas.height = viewport.height;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      await page.render({ canvasContext: ctx, viewport }).promise;
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', config.jpegQuality));
-      const arrayBuffer = await blob.arrayBuffer();
-      const jpegImage = await newPdf.embedJpg(new Uint8Array(arrayBuffer));
-      const origViewport = page.getViewport({ scale: 1.0 });
-      const pdfPage = newPdf.addPage([origViewport.width, origViewport.height]);
-      pdfPage.drawImage(jpegImage, { x: 0, y: 0, width: origViewport.width, height: origViewport.height });
-      canvas.width = 0; canvas.height = 0;
-      if (onProgress) onProgress(i, totalPages);
-      await new Promise((r) => setTimeout(r, 0));
-    }
-
-    newPdf.setAuthor(''); newPdf.setSubject(''); newPdf.setKeywords([]);
-    newPdf.setCreator(''); newPdf.setProducer(''); newPdf.setTitle('');
-    const bytes = await newPdf.save({ useObjectStreams: true, addDefaultPage: false, objectsPerTick: 30 });
-    return new Blob([bytes], { type: 'application/pdf' });
-  };
-
+  /* ── compression logic (runs in Web Worker) ──────────────── */
   const handleCompress = async () => {
     if (!pdfFile) return;
-    setProcessing(true); setProgress(0); setError(null);
+    setError(null);
 
     try {
-      const { PDFDocument } = await import('pdf-lib');
-      setProgress(10);
-      let arrayBuffer;
       const { isLargeFile, processLargeFile } = await import('../utils/streamProcessor');
-      arrayBuffer = isLargeFile(pdfFile) ? await processLargeFile(pdfFile) : await pdfFile.arrayBuffer();
-      setProgress(15);
+      const arrayBuffer = isLargeFile(pdfFile) ? await processLargeFile(pdfFile) : await pdfFile.arrayBuffer();
 
-      const config = LEVEL_CONFIG[compressionLevel];
-      const originalBlob = new Blob([arrayBuffer], { type: 'application/pdf' });
-      const candidates = [originalBlob];
+      // Send the buffer to the worker (copy it so we keep the original)
+      const bufferCopy = arrayBuffer.slice(0);
+      const result = await runWorker(
+        'compress',
+        { buffer: bufferCopy, level: compressionLevel },
+        [bufferCopy]
+      );
 
-      setProgress(20);
-      try {
-        const metadataBlob = await compressMetadataOnly(PDFDocument, arrayBuffer, compressionLevel === 'screen');
-        candidates.push(metadataBlob);
-      } catch { /* continue */ }
-      setProgress(30);
-
-      if (config.tryRasterize) {
-        try {
-          const rasterBlob = await compressRasterize(PDFDocument, arrayBuffer, config,
-            (current, total) => setProgress(30 + Math.round((current / total) * 60)));
-          candidates.push(rasterBlob);
-        } catch { /* continue */ }
-      }
-
-      setProgress(95);
-      candidates.sort((a, b) => a.size - b.size);
-      const bestBlob = candidates[0];
-      setCompressedBlob(bestBlob);
-      setCompressedSize(bestBlob.size);
-      setProgress(100);
+      const blob = new Blob([result.data], { type: 'application/pdf' });
+      setCompressedBlob(blob);
+      setCompressedSize(result.compressedSize || blob.size);
       setIsSuccess(true);
     } catch (err) {
       setError(`Compression failed: ${err.message}. The PDF may be encrypted or corrupted.`);
-    } finally {
-      setProcessing(false);
     }
   };
 
