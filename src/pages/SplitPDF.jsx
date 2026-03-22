@@ -292,43 +292,98 @@ export default function SplitPDF() {
             </p>
 
             {outputs.length > 1 && (
-              <DownloadButton
-                onDownload={downloadAll}
-                label={`Download All ${outputs.length} Files`}
-                disabled={outputs.length === 0}
-              />
+              <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                <DownloadButton
+                  onDownload={downloadAll}
+                  label={`Download All ${outputs.length} Files`}
+                  disabled={outputs.length === 0}
+                />
+              </div>
             )}
 
-            {/* Individual file cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 12, marginBottom: 20, width: '100%' }}>
+            {/* Individual file cards — auto-fit collapses empty tracks so one file stays centered/full-width */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gap: 12,
+                marginBottom: 20,
+                width: '100%',
+                maxWidth: '100%',
+                justifyItems: 'stretch',
+              }}
+            >
               {outputs.map((item, i) => (
-                <div key={i} style={{
-                  borderRadius: 14, padding: '16px 14px',
-                  backgroundColor: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  display: 'flex', flexDirection: 'column', gap: 10,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{
-                      width: 36, height: 36, borderRadius: 10,
-                      background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.2)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                    }}>
+                <div
+                  key={i}
+                  style={{
+                    borderRadius: 14,
+                    padding: '16px 14px',
+                    backgroundColor: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 12,
+                    width: '100%',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 10,
+                      width: '100%',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        background: 'rgba(99,102,241,0.12)',
+                        border: '1px solid rgba(99,102,241,0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
                       <FileText size={16} color="#818CF8" />
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontWeight: 600, fontSize: '0.78rem', color: 'white', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</p>
-                      <p style={{ fontSize: '0.7rem', color: '#A1A1AA', margin: 0, fontWeight: 500 }}>
+                    <div style={{ width: '100%', minWidth: 0 }}>
+                      <p
+                        style={{
+                          fontWeight: 600,
+                          fontSize: '0.78rem',
+                          color: 'white',
+                          margin: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          textAlign: 'center',
+                        }}
+                      >
+                        {item.name}
+                      </p>
+                      <p style={{ fontSize: '0.7rem', color: '#A1A1AA', margin: '4px 0 0', fontWeight: 500, textAlign: 'center' }}>
                         {item.from === item.to ? `Page ${item.from}` : `Pages ${item.from}–${item.to}`} · {formatSize(item.size)}
                       </p>
                     </div>
                   </div>
-                  <DownloadButton onDownload={() => downloadOne(item)} label="Download" disabled={!item.blob} />
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                    <DownloadButton onDownload={() => downloadOne(item)} label="Download" disabled={!item.blob} />
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', width: '100%' }}>
               <button
                 onClick={handleReset}
                 style={{ padding: '10px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', color: '#E4E4E7', transition: 'all 0.2s ease' }}
