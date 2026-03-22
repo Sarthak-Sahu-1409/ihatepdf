@@ -1,57 +1,47 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Upload, X, ArrowLeft, Download, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft, X, FileText, Zap, SlidersHorizontal, Feather,
+  AlertTriangle, Check, Info, Loader2,
+} from 'lucide-react';
 import { UploadCard } from '../components/ui/upload-ui';
 import { DownloadButton } from '../components/ui/download-animation';
 import { saveBlobToDisk } from '../utils/saveBlobToDisk';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import formatFileSize from '../utils/formatFileSize';
-
+import MotionButton from '../components/ui/motion-button';
+import { HeroDitheringCard } from '../components/ui/hero-dithering-card';
 
 const COMPRESSION_LEVELS = [
   {
     id: 'screen',
-    emoji: '📧',
+    Icon: Zap,
     label: 'Maximum',
     sublabel: 'Email & web',
     reduction: 'Up to 70% smaller',
-    bg: '#FDE68A',
-    selectedBg: '#FCD34D',
-    shadow: 'rgba(161,98,7,0.4)',
-    selectedShadow: 'rgba(161,98,7,0.6)',
-    accent: '#92400E',
   },
   {
     id: 'ebook',
-    emoji: '⚖️',
+    Icon: SlidersHorizontal,
     label: 'Balanced',
     sublabel: 'Sharing & reading',
     reduction: 'Up to 50% smaller',
-    bg: '#BBF7D0',
-    selectedBg: '#86EFAC',
-    shadow: 'rgba(21,128,61,0.4)',
-    selectedShadow: 'rgba(21,128,61,0.6)',
-    accent: '#14532D',
   },
   {
     id: 'printer',
-    emoji: '🖨️',
+    Icon: Feather,
     label: 'Light',
     sublabel: 'Print & archive',
     reduction: 'Up to 20% smaller',
-    bg: '#BFDBFE',
-    selectedBg: '#93C5FD',
-    shadow: 'rgba(29,78,216,0.4)',
-    selectedShadow: 'rgba(29,78,216,0.6)',
-    accent: '#1E3A8A',
   },
 ];
+
+const LEVEL_LABELS = { screen: 'Maximum', ebook: 'Balanced', printer: 'Light' };
 
 /* ════════════════════════════════════════════════════════════════
    COMPRESS PDF PAGE
    ════════════════════════════════════════════════════════════════ */
 export default function CompressPDF() {
-  /* ── state ──────────────────────────────────────────────── */
   const [pdfFile, setPdfFile] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [compressionLevel, setCompressionLevel] = useState('ebook');
@@ -66,19 +56,17 @@ export default function CompressPDF() {
   const [compressedBlob, setCompressedBlob] = useState(null);
   const fileInputRef = useRef(null);
 
-  /* ── computed ───────────────────────────────────────────── */
   const savedPercent =
     originalSize > 0
       ? Math.round(((originalSize - compressedSize) / originalSize) * 100)
       : 0;
 
-  /* ── file loading ───────────────────────────────────────── */
+  /* ── file loading ─────────────────────────────────────────── */
   const handleFileLoad = async (file) => {
     if (!file || (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf'))) {
       setError('Please select a valid PDF file.');
       return;
     }
-
     setPdfFile(file);
     setOriginalSize(file.size);
     setError(null);
@@ -97,208 +85,117 @@ export default function CompressPDF() {
         if (err.name === 'PasswordException' || err.message?.includes('password')) {
           try {
             doc = await pdfjsLib.getDocument({ data: ab.slice(0), password: '', verbosity: 0 }).promise;
-          } catch {
-            setPageCount(0);
-            setThumbnail(null);
-            return;
-          }
-        } else {
-          setPageCount(0);
-          setThumbnail(null);
-          return;
-        }
+          } catch { setPageCount(0); setThumbnail(null); return; }
+        } else { setPageCount(0); setThumbnail(null); return; }
       }
 
       setPageCount(doc.numPages);
-
       try {
         const page = await doc.getPage(1);
         const vp = page.getViewport({ scale: 0.5 });
         const canvas = document.createElement('canvas');
-        canvas.width = vp.width;
-        canvas.height = vp.height;
+        canvas.width = vp.width; canvas.height = vp.height;
         await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
         setThumbnail(canvas.toDataURL('image/jpeg', 0.7));
-      } catch {
-        setThumbnail(null);
-      }
-    } catch {
-      /* thumbnail/page count failed silently */
-    }
+      } catch { setThumbnail(null); }
+    } catch { /* silent */ }
   };
 
   const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragOver(false);
+    e.preventDefault(); setIsDragOver(false);
     const file = e.dataTransfer.files[0];
     if (file) handleFileLoad(file);
   };
 
   const handleRemoveFile = () => {
-    setPdfFile(null);
-    setThumbnail(null);
-    setPageCount(0);
-    setOriginalSize(0);
-    setError(null);
-    setIsSuccess(false);
-    setCompressedBlob(null);
-    setCompressedSize(0);
+    setPdfFile(null); setThumbnail(null); setPageCount(0);
+    setOriginalSize(0); setError(null); setIsSuccess(false);
+    setCompressedBlob(null); setCompressedSize(0);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  /* ── compression settings per level ──────────────────────── */
+  /* ── compression logic ────────────────────────────────────── */
   const LEVEL_CONFIG = {
     screen:  { scale: 0.75, jpegQuality: 0.30, tryRasterize: true },
     ebook:   { scale: 1.0,  jpegQuality: 0.50, tryRasterize: true },
     printer: { scale: 1.5,  jpegQuality: 0.80, tryRasterize: true },
   };
 
-  /* ── helper: metadata-only compression ──────────────────── */
   const compressMetadataOnly = async (PDFDocument, buffer, stripAll) => {
-    const pdfDoc = await PDFDocument.load(buffer, {
-      ignoreEncryption: true,
-      updateMetadata: false,
-    });
-    pdfDoc.setAuthor('');
-    pdfDoc.setSubject('');
-    pdfDoc.setKeywords([]);
-    pdfDoc.setCreator('');
-    pdfDoc.setProducer('');
+    const pdfDoc = await PDFDocument.load(buffer, { ignoreEncryption: true, updateMetadata: false });
+    pdfDoc.setAuthor(''); pdfDoc.setSubject(''); pdfDoc.setKeywords([]);
+    pdfDoc.setCreator(''); pdfDoc.setProducer('');
     if (stripAll) pdfDoc.setTitle('');
-    const bytes = await pdfDoc.save({
-      useObjectStreams: true,
-      addDefaultPage: false,
-      objectsPerTick: 50,
-    });
+    const bytes = await pdfDoc.save({ useObjectStreams: true, addDefaultPage: false, objectsPerTick: 50 });
     return new Blob([bytes], { type: 'application/pdf' });
   };
 
-  /* ── helper: rasterize pages to JPEG ────────────────────── */
   const compressRasterize = async (PDFDocument, buffer, config, onProgress) => {
     const pdfjsLib = await import('pdfjs-dist');
     pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
-
-    const srcDoc = await pdfjsLib.getDocument({
-      data: buffer.slice(0),
-      verbosity: 0,
-    }).promise;
-
+    const srcDoc = await pdfjsLib.getDocument({ data: buffer.slice(0), verbosity: 0 }).promise;
     const newPdf = await PDFDocument.create();
     const totalPages = srcDoc.numPages;
 
     for (let i = 1; i <= totalPages; i++) {
       const page = await srcDoc.getPage(i);
       const viewport = page.getViewport({ scale: config.scale });
-
       const canvas = document.createElement('canvas');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
+      canvas.width = viewport.width; canvas.height = viewport.height;
       const ctx = canvas.getContext('2d');
-      
-      // Fill with white background to prevent transparent-to-black issue
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       await page.render({ canvasContext: ctx, viewport }).promise;
-
-      // Use async toBlob to avoid huge synchronous memory spikes (base64 string)
-      const blob = await new Promise((resolve) =>
-        canvas.toBlob(resolve, 'image/jpeg', config.jpegQuality)
-      );
-      
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', config.jpegQuality));
       const arrayBuffer = await blob.arrayBuffer();
-      const jpegBytes = new Uint8Array(arrayBuffer);
-
-      const jpegImage = await newPdf.embedJpg(jpegBytes);
+      const jpegImage = await newPdf.embedJpg(new Uint8Array(arrayBuffer));
       const origViewport = page.getViewport({ scale: 1.0 });
       const pdfPage = newPdf.addPage([origViewport.width, origViewport.height]);
-      pdfPage.drawImage(jpegImage, {
-        x: 0, y: 0,
-        width: origViewport.width,
-        height: origViewport.height,
-      });
-
-      canvas.width = 0;
-      canvas.height = 0;
-
+      pdfPage.drawImage(jpegImage, { x: 0, y: 0, width: origViewport.width, height: origViewport.height });
+      canvas.width = 0; canvas.height = 0;
       if (onProgress) onProgress(i, totalPages);
-      
-      // Yield to main thread so the progress bar UI has time to redraw
       await new Promise((r) => setTimeout(r, 0));
     }
 
-    newPdf.setAuthor('');
-    newPdf.setSubject('');
-    newPdf.setKeywords([]);
-    newPdf.setCreator('');
-    newPdf.setProducer('');
-    newPdf.setTitle('');
-
-    const bytes = await newPdf.save({
-      useObjectStreams: true,
-      addDefaultPage: false,
-      objectsPerTick: 30,
-    });
+    newPdf.setAuthor(''); newPdf.setSubject(''); newPdf.setKeywords([]);
+    newPdf.setCreator(''); newPdf.setProducer(''); newPdf.setTitle('');
+    const bytes = await newPdf.save({ useObjectStreams: true, addDefaultPage: false, objectsPerTick: 30 });
     return new Blob([bytes], { type: 'application/pdf' });
   };
 
-  /* ── compress — try multiple approaches, pick smallest ──── */
   const handleCompress = async () => {
     if (!pdfFile) return;
-    setProcessing(true);
-    setProgress(0);
-    setError(null);
+    setProcessing(true); setProgress(0); setError(null);
 
     try {
       const { PDFDocument } = await import('pdf-lib');
       setProgress(10);
-
       let arrayBuffer;
       const { isLargeFile, processLargeFile } = await import('../utils/streamProcessor');
-      if (isLargeFile(pdfFile)) {
-        arrayBuffer = await processLargeFile(pdfFile);
-      } else {
-        arrayBuffer = await pdfFile.arrayBuffer();
-      }
+      arrayBuffer = isLargeFile(pdfFile) ? await processLargeFile(pdfFile) : await pdfFile.arrayBuffer();
       setProgress(15);
 
       const config = LEVEL_CONFIG[compressionLevel];
       const originalBlob = new Blob([arrayBuffer], { type: 'application/pdf' });
       const candidates = [originalBlob];
 
-      // APPROACH 1: Metadata strip + object-stream re-save
       setProgress(20);
       try {
-        const metadataBlob = await compressMetadataOnly(
-          PDFDocument,
-          arrayBuffer,
-          compressionLevel === 'screen'
-        );
+        const metadataBlob = await compressMetadataOnly(PDFDocument, arrayBuffer, compressionLevel === 'screen');
         candidates.push(metadataBlob);
-      } catch { /* metadata strip failed, continue */ }
+      } catch { /* continue */ }
       setProgress(30);
 
-      // APPROACH 2: Rasterize pages to JPEG (all levels now try this)
       if (config.tryRasterize) {
         try {
-          const rasterBlob = await compressRasterize(
-            PDFDocument,
-            arrayBuffer,
-            config,
-            (current, total) => {
-              setProgress(30 + Math.round((current / total) * 60));
-            }
-          );
+          const rasterBlob = await compressRasterize(PDFDocument, arrayBuffer, config,
+            (current, total) => setProgress(30 + Math.round((current / total) * 60)));
           candidates.push(rasterBlob);
-        } catch { /* rasterize failed, continue with other candidates */ }
+        } catch { /* continue */ }
       }
 
       setProgress(95);
-
-      // Pick the SMALLEST candidate — never return a file bigger than the original
       candidates.sort((a, b) => a.size - b.size);
       const bestBlob = candidates[0];
-
       setCompressedBlob(bestBlob);
       setCompressedSize(bestBlob.size);
       setProgress(100);
@@ -310,851 +207,355 @@ export default function CompressPDF() {
     }
   };
 
-  /* ── download ───────────────────────────────────────────── */
   const handleDownload = async () => {
     if (!compressedBlob) return false;
     const baseName = (pdfFile?.name || 'document').replace(/\.pdf$/i, '');
     return saveBlobToDisk(compressedBlob, `${baseName}-compressed.pdf`);
   };
 
-  /* ── reset ──────────────────────────────────────────────── */
   const handleReset = () => {
     handleRemoveFile();
-    setCompressedBlob(null);
-    setCompressedSize(0);
-    setIsSuccess(false);
-    setProgress(0);
+    setCompressedBlob(null); setCompressedSize(0);
+    setIsSuccess(false); setProgress(0);
   };
+
+  const PROCESSING_STEPS = [
+    { label: 'Loading PDF',           threshold: 20 },
+    { label: 'Stripping metadata',    threshold: 50 },
+    { label: 'Optimizing structure',  threshold: 80 },
+    { label: 'Finalizing output',     threshold: 100 },
+  ];
 
   /* ════════════════════════════════════════════════════════════
      RENDER
      ════════════════════════════════════════════════════════════ */
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        fontFamily: "'Inter', system-ui, sans-serif",
-        overflowX: 'hidden',
-        padding: '32px 24px 80px',
-      }}
-    >
+    <div style={{ minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif", overflowX: 'hidden', padding: '32px 16px 120px' }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        {/* ═══════════════════════════════════════════════════════
-            SECTION 1 — PAGE HEADER
-            ═══════════════════════════════════════════════════════ */}
-        <div style={{ marginBottom: 28 }}>
-          {/* Back button */}
+
+        {/* ── Header ─────────────────────────────────────────── */}
+        <div style={{ marginBottom: 32 }}>
           <Link
             to="/"
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 18px',
-              borderRadius: 14,
-              marginBottom: 24,
-              background: 'rgba(255,255,255,0.88)',
-              color: '#3730A3',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              textDecoration: 'none',
-              boxShadow:
-                '0 4px 0px rgba(55,48,163,0.2), 0 10px 28px rgba(60,100,220,0.18), inset 0 -3px 8px rgba(100,130,220,0.15), inset 0 3px 8px rgba(255,255,255,0.98)',
-              transition: 'transform 0.2s ease',
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '10px 20px', borderRadius: 20,
+              background: 'rgba(255,255,255,0.06)', fontWeight: 600,
+              color: '#E4E4E7', textDecoration: 'none',
+              border: '1px solid rgba(255,255,255,0.08)',
+              transition: 'all 0.2s ease', marginBottom: 24,
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-3px)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#E4E4E7'; }}
           >
-            <ArrowLeft size={15} /> Back
+            <ArrowLeft size={18} /> Back to Home
           </Link>
-
-          {/* Title row */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 16,
-              marginBottom: 10,
-            }}
-          >
-            <div
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 16,
-                flexShrink: 0,
-                background: '#BBF7D0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow:
-                  '0 5px 0px rgba(21,128,61,0.4), 0 14px 36px rgba(22,163,74,0.32), inset 0 -6px 14px rgba(22,163,74,0.28), inset 0 6px 14px rgba(255,255,255,0.95)',
-              }}
-            >
-              <span style={{ fontSize: '1.5rem' }}>🗜️</span>
-            </div>
-            <div>
-              <h1
-                style={{
-                  fontSize: '1.75rem',
-                  fontWeight: 900,
-                  color: 'white',
-                  margin: 0,
-                  textShadow: '0 2px 12px rgba(0,0,0,0.2)',
-                }}
-              >
-                Compress PDF
-              </h1>
-              <p
-                style={{
-                  color: 'rgba(255,255,255,0.7)',
-                  fontSize: '0.875rem',
-                  margin: 0,
-                }}
-              >
-                Reduce file size instantly
-              </p>
-            </div>
-          </div>
+          <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, color: 'white', marginBottom: 10, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+            Compress PDF
+          </h1>
         </div>
 
-        {/* ═══════════════════════════════════════════════════════
-            SECTION 6 — ERROR STATE
-            ═══════════════════════════════════════════════════════ */}
+        {/* ── Error ──────────────────────────────────────────── */}
         {error && (
-          <div
-            style={{
-              borderRadius: 20,
-              padding: '16px 20px',
-              marginBottom: 16,
-              background: '#FEE2E2',
-              boxShadow:
-                '0 5px 0px rgba(185,28,28,0.28), 0 14px 36px rgba(220,38,38,0.22), inset 0 -6px 14px rgba(220,38,38,0.18), inset 0 6px 14px rgba(255,255,255,0.85)',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 12,
-            }}
-          >
-            <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>⚠️</span>
+          <div style={{
+            borderRadius: 14, padding: '20px 24px',
+            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+            display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 20,
+          }}>
+            <AlertTriangle size={22} color="#F87171" style={{ flexShrink: 0, marginTop: 1 }} />
             <div style={{ flex: 1 }}>
-              <p style={{ fontWeight: 700, color: '#991B1B', fontSize: '0.9rem', margin: '0 0 3px' }}>
-                Compression failed
-              </p>
-              <p style={{ color: '#B91C1C', fontSize: '0.8rem', margin: 0 }}>{error}</p>
+              <p style={{ fontWeight: 700, color: '#F87171', fontSize: '0.9rem', margin: '0 0 2px' }}>Compression failed</p>
+              <p style={{ fontSize: '0.8rem', color: '#FCA5A5', margin: 0 }}>{error}</p>
             </div>
             <button
               onClick={() => setError(null)}
-              style={{
-                padding: '5px 12px',
-                borderRadius: 10,
-                border: 'none',
-                background: 'rgba(255,255,255,0.7)',
-                color: '#991B1B',
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                flexShrink: 0,
-              }}
+              style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.78rem', cursor: 'pointer', color: '#E4E4E7', fontWeight: 600, transition: 'all 0.2s ease' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#E4E4E7'; }}
             >
               Dismiss
             </button>
           </div>
         )}
 
-        {/* ═══════════════════════════════════════════════════════
-            SECTION 5 — SUCCESS STATE
-            ═══════════════════════════════════════════════════════ */}
+        {/* ── Success ────────────────────────────────────────── */}
         {isSuccess && (
-          <div
-            style={{
-              borderRadius: 32,
-              padding: '32px 28px',
-              background: 'linear-gradient(145deg, #D1FAE5, #A7F3D0)',
-              boxShadow:
-                '0 12px 0px rgba(21,128,61,0.38), 0 36px 90px rgba(22,163,74,0.42), inset 0 -14px 32px rgba(22,163,74,0.26), inset 0 14px 32px rgba(255,255,255,0.95)',
-              marginBottom: 16,
-              overflow: 'visible',
-            }}
-          >
-            {/* Success icon */}
-            <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <div
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 20,
-                  margin: '0 auto 10px',
-                  background: '#BBF7D0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.8rem',
-                  boxShadow:
-                    '0 7px 0px rgba(21,128,61,0.38), 0 18px 44px rgba(22,163,74,0.3), inset 0 -7px 16px rgba(22,163,74,0.25), inset 0 7px 16px rgba(255,255,255,0.95)',
-                }}
-              >
-                ✅
-              </div>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#14532D', margin: 0 }}>
-                Compression Complete!
-              </h3>
-            </div>
+          <HeroDitheringCard accentColor="#6366f1" minHeight={420} style={{ marginBottom: 20 }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'white', marginBottom: 6, letterSpacing: '-0.02em', textAlign: 'center' }}>
+              Compression Complete!
+            </h3>
+            <p style={{ color: '#A1A1AA', fontSize: '0.9rem', fontWeight: 500, marginBottom: 24, textAlign: 'center' }}>
+              {pdfFile?.name}
+            </p>
 
-            {/* BEFORE / AFTER SIZE COMPARISON */}
-            <div
-              style={{
-                borderRadius: 20,
-                padding: 18,
-                marginBottom: 18,
-                background: 'rgba(255,255,255,0.6)',
-                boxShadow:
-                  'inset 0 3px 10px rgba(255,255,255,0.7), inset 0 -3px 10px rgba(21,128,61,0.1)',
-              }}
-            >
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr auto 1fr',
-                  gap: 12,
-                  alignItems: 'center',
-                }}
-              >
-                {/* BEFORE */}
+            {/* Before / After */}
+            <div style={{
+              borderRadius: 14, padding: '18px 20px', marginBottom: 20, width: '100%', boxSizing: 'border-box',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'center' }}>
                 <div style={{ textAlign: 'center' }}>
-                  <p
-                    style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      color: '#9CA3AF',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                      margin: '0 0 4px',
-                    }}
-                  >
-                    Before
-                  </p>
-                  <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#DC2626', margin: '0 0 2px' }}>
-                    {formatFileSize(originalSize)}
-                  </p>
+                  <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 4px' }}>Before</p>
+                  <p style={{ fontSize: '1.4rem', fontWeight: 800, color: '#F87171', margin: '0 0 2px' }}>{formatFileSize(originalSize)}</p>
                   <p style={{ fontSize: '0.72rem', color: '#6B7280', margin: 0 }}>Original</p>
                 </div>
-
-                {/* Savings badge */}
                 <div style={{ textAlign: 'center' }}>
-                  <div
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: 14,
-                      marginBottom: 4,
-                      background: savedPercent > 0 ? '#BBF7D0' : '#FEF3C7',
-                      boxShadow: savedPercent > 0
-                        ? '0 4px 0px rgba(21,128,61,0.35), 0 10px 24px rgba(22,163,74,0.28), inset 0 -4px 10px rgba(22,163,74,0.22), inset 0 4px 10px rgba(255,255,255,0.9)'
-                        : '0 4px 0px rgba(161,98,7,0.25), 0 10px 24px rgba(202,138,4,0.18), inset 0 -4px 10px rgba(202,138,4,0.15), inset 0 4px 10px rgba(255,255,255,0.9)',
-                    }}
-                  >
-                    <p style={{ fontSize: '1.1rem', fontWeight: 900, color: savedPercent > 0 ? '#14532D' : '#92400E', margin: 0 }}>
+                  <div style={{
+                    padding: '6px 10px', borderRadius: 10, marginBottom: 4,
+                    background: savedPercent > 0 ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.06)',
+                    border: `1px solid ${savedPercent > 0 ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                  }}>
+                    <p style={{ fontSize: '1rem', fontWeight: 800, color: savedPercent > 0 ? '#818CF8' : '#9CA3AF', margin: 0 }}>
                       {savedPercent > 0 ? `-${savedPercent}%` : '~0%'}
                     </p>
                   </div>
-                  <span style={{ fontSize: '1.2rem' }}>→</span>
+                  <span style={{ color: '#6B7280', fontSize: '1rem' }}>→</span>
                 </div>
-
-                {/* AFTER */}
                 <div style={{ textAlign: 'center' }}>
-                  <p
-                    style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      color: '#9CA3AF',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                      margin: '0 0 4px',
-                    }}
-                  >
-                    After
-                  </p>
-                  <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#15803D', margin: '0 0 2px' }}>
-                    {formatFileSize(compressedSize)}
-                  </p>
+                  <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 4px' }}>After</p>
+                  <p style={{ fontSize: '1.4rem', fontWeight: 800, color: '#34D399', margin: '0 0 2px' }}>{formatFileSize(compressedSize)}</p>
                   <p style={{ fontSize: '0.72rem', color: '#6B7280', margin: 0 }}>Compressed</p>
                 </div>
               </div>
 
-              {/* Savings bar */}
               {savedPercent > 0 && (
                 <div style={{ marginTop: 14 }}>
-                  <div
-                    style={{
-                      position: 'relative',
-                      height: 10,
-                      borderRadius: 999,
-                      background: '#FEE2E2',
-                      overflow: 'visible',
-                      boxShadow: 'inset 0 2px 6px rgba(220,38,38,0.15)',
-                    }}
-                  >
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        height: '100%',
-                        width: `${100 - savedPercent}%`,
-                        borderRadius: 999,
-                        background: 'linear-gradient(90deg, #22C55E, #16A34A)',
-                        boxShadow: '0 0 8px rgba(34,197,94,0.5)',
-                        transition: 'width 1s cubic-bezier(0.34,1.2,0.64,1)',
-                      }}
-                    />
+                  <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', width: `${100 - savedPercent}%`, borderRadius: 999,
+                      background: 'linear-gradient(90deg, #6366f1, #818CF8)',
+                      transition: 'width 1s cubic-bezier(0.34,1.2,0.64,1)',
+                    }} />
                   </div>
-                  <p
-                    style={{
-                      textAlign: 'center',
-                      fontSize: '0.75rem',
-                      color: '#15803D',
-                      fontWeight: 700,
-                      marginTop: 6,
-                    }}
-                  >
+                  <p style={{ textAlign: 'center', fontSize: '0.75rem', color: '#818CF8', fontWeight: 600, marginTop: 6 }}>
                     You saved {formatFileSize(originalSize - compressedSize)}
                   </p>
                 </div>
               )}
             </div>
 
-            {/* Edge case: minimal or no savings */}
             {savedPercent <= 5 && (
-              <div
-                style={{
-                  borderRadius: 14,
-                  padding: '10px 14px',
-                  marginBottom: 16,
-                  background: '#FEF3C7',
-                  display: 'flex',
-                  gap: 8,
-                  alignItems: 'flex-start',
-                  boxShadow: 'inset 0 2px 6px rgba(251,191,36,0.2)',
-                }}
-              >
-                <span>ℹ️</span>
-                <p style={{ fontSize: '0.78rem', color: '#92400E', margin: 0, fontWeight: 500 }}>
+              <div style={{
+                borderRadius: 12, padding: '10px 14px', marginBottom: 16, width: '100%', boxSizing: 'border-box',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                display: 'flex', gap: 10, alignItems: 'flex-start',
+              }}>
+                <Info size={16} color="#818CF8" style={{ flexShrink: 0, marginTop: 2 }} />
+                <p style={{ fontSize: '0.78rem', color: '#A1A1AA', margin: 0, fontWeight: 500 }}>
                   {savedPercent <= 0
-                    ? 'This PDF is already as compact as possible. No further compression could reduce its size — your original file is returned unchanged.'
-                    : 'This PDF was already well-optimized. Minimal additional compression was possible — this is normal for PDFs created by modern tools.'}
+                    ? 'This PDF is already as compact as possible — your original file is returned unchanged.'
+                    : 'This PDF was already well-optimized. Minimal additional compression was possible.'}
                 </p>
               </div>
             )}
 
-            {/* Download button */}
-            <DownloadButton
-              onDownload={handleDownload}
-              label="Download Compressed PDF"
-              disabled={!compressedBlob}
-            />
+            <DownloadButton onDownload={handleDownload} label="Download Compressed PDF" disabled={!compressedBlob} />
 
-            {/* Compress another */}
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 8 }}>
               <button
                 onClick={handleReset}
-                style={{
-                  flex: 1,
-                  padding: 12,
-                  borderRadius: 16,
-                  border: 'none',
-                  background: 'rgba(255,255,255,0.7)',
-                  color: '#15803D',
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  boxShadow:
-                    '0 4px 0px rgba(21,128,61,0.18), 0 10px 24px rgba(22,163,74,0.15), inset 0 -4px 10px rgba(22,163,74,0.12), inset 0 4px 10px rgba(255,255,255,0.95)',
-                  transition: 'transform 0.2s ease',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-3px)')}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+                style={{ padding: '10px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', color: '#E4E4E7', transition: 'all 0.2s ease' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#E4E4E7'; }}
               >
-                🗜️ Compress Another PDF
+                Compress Another PDF
               </button>
-              <Link to="/" style={{
-                flex: 1, padding: 12, borderRadius: 16, background: 'rgba(255,255,255,0.7)', color: '#3730A3', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 0px rgba(55,48,163,0.18), 0 10px 24px rgba(60,100,220,0.14), inset 0 -4px 10px rgba(100,130,220,0.1), inset 0 4px 10px rgba(255,255,255,0.95)', transition: 'transform 0.2s ease'
-              }}
-              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+              <Link
+                to="/"
+                style={{ padding: '10px 20px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, fontSize: '0.875rem', textDecoration: 'none', color: '#E4E4E7', transition: 'all 0.2s ease' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#E4E4E7'; }}
               >
-                ← Back to Tools
+                Back to Tools
               </Link>
             </div>
-          </div>
+          </HeroDitheringCard>
         )}
 
-        {/* ═══════════════════════════════════════════════════════
-            SECTION 2 — UPLOAD ZONE (no file loaded, not success)
-            ═══════════════════════════════════════════════════════ */}
+        {/* ── Upload zone ────────────────────────────────────── */}
         {!pdfFile && !isSuccess && (
-          <div onDragOver={e => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} style={{ marginBottom: 20 }}>
+          <div onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} style={{ marginBottom: 20 }}>
             <UploadCard
               status="idle"
-              title={isDragOver ? "Drop your PDF here!" : "Drop your PDF to compress"}
-              description="or click to browse • Single PDF file"
+              title={isDragOver ? 'Drop your PDF here!' : 'Drop your PDF to compress'}
+              description="or click to browse · Single PDF file"
               onClick={() => fileInputRef.current?.click()}
               onDrop={handleDrop}
             />
             <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf"
-              hidden
-              onChange={(e) => {
-                if (e.target.files[0]) handleFileLoad(e.target.files[0]);
-                e.target.value = '';
-              }}
+              ref={fileInputRef} type="file" accept=".pdf" hidden
+              onChange={(e) => { if (e.target.files[0]) handleFileLoad(e.target.files[0]); e.target.value = ''; }}
             />
           </div>
         )}
 
-        {/* ═══════════════════════════════════════════════════════
-            SECTION 3 — FILE LOADED STATE
-            ═══════════════════════════════════════════════════════ */}
+        {/* ── File loaded ─────────────────────────────────────── */}
         {pdfFile && !isSuccess && (
           <>
-            {/* 3A — File Preview Card */}
-            <div
-              style={{
-                borderRadius: 24,
-                padding: '18px 22px',
-                marginBottom: 16,
-                background: '#BBF7D0',
-                boxShadow:
-                  '0 7px 0px rgba(21,128,61,0.4), 0 20px 55px rgba(22,163,74,0.32), inset 0 -10px 22px rgba(22,163,74,0.26), inset 0 10px 22px rgba(255,255,255,0.9)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                overflow: 'visible',
-              }}
-            >
-              {/* PDF thumbnail */}
-              <div
-                style={{
-                  width: 48,
-                  height: 60,
-                  borderRadius: 8,
-                  flexShrink: 0,
-                  overflow: 'hidden',
-                  background: '#D1FAE5',
-                  boxShadow:
-                    '0 3px 0px rgba(21,128,61,0.3), 0 8px 20px rgba(22,163,74,0.22)',
-                }}
-              >
+            {/* File card */}
+            <div style={{
+              borderRadius: 14, padding: '18px 22px', marginBottom: 20,
+              backgroundColor: '#1C1D21',
+              backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+              display: 'flex', alignItems: 'center', gap: 14,
+            }}>
+              {/* thumbnail */}
+              <div style={{ width: 48, height: 60, borderRadius: 8, flexShrink: 0, overflow: 'hidden', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
                 {thumbnail ? (
-                  <img
-                    src={thumbnail}
-                    alt="Preview"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
+                  <img src={thumbnail} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '1.4rem',
-                    }}
-                  >
-                    📄
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <FileText size={22} color="#52525B" />
                   </div>
                 )}
               </div>
 
-              {/* File info */}
+              {/* file info */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p
-                  style={{
-                    fontWeight: 700,
-                    color: '#14532D',
-                    fontSize: '0.92rem',
-                    margin: '0 0 3px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
+                <p style={{ fontWeight: 700, color: 'white', fontSize: '0.92rem', margin: '0 0 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {pdfFile.name}
                 </p>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.78rem', color: '#15803D', fontWeight: 600 }}>
-                    📦 {formatFileSize(pdfFile.size)}
-                  </span>
-                  {pageCount > 0 && (
-                    <span style={{ fontSize: '0.78rem', color: '#15803D', fontWeight: 600 }}>
-                      📄 {pageCount} pages
-                    </span>
-                  )}
+                  <span style={{ fontSize: '0.78rem', color: '#A1A1AA', fontWeight: 500 }}>{formatFileSize(pdfFile.size)}</span>
+                  {pageCount > 0 && <span style={{ fontSize: '0.78rem', color: '#A1A1AA', fontWeight: 500 }}>{pageCount} {pageCount === 1 ? 'page' : 'pages'}</span>}
                 </div>
               </div>
 
-              {/* Remove button */}
+              {/* remove */}
               <button
                 onClick={handleRemoveFile}
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 10,
-                  flexShrink: 0,
-                  background: '#FEE2E2',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow:
-                    '0 3px 0px rgba(185,28,28,0.28), 0 8px 20px rgba(220,38,38,0.18)',
-                  transition: 'transform 0.15s ease',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                style={{ width: 32, height: 32, borderRadius: 8, background: 'transparent', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#EF4444', transition: 'all 0.2s ease' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.color = '#F87171'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#EF4444'; }}
               >
-                <X size={15} color="#DC2626" />
+                <X size={15} />
               </button>
             </div>
 
-            {/* 3B — Compression Level Selector */}
-            <p
-              style={{
-                color: 'rgba(255,255,255,0.8)',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                margin: '0 0 10px',
-              }}
-            >
+            {/* Compression level selector */}
+            <p style={{ color: '#6B7280', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>
               Choose Compression Level
             </p>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr',
-                gap: 10,
-                marginBottom: 20,
-              }}
-            >
-              {COMPRESSION_LEVELS.map((level) => {
-                const isSelected = compressionLevel === level.id;
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
+              {COMPRESSION_LEVELS.map(({ id, Icon, label, sublabel, reduction }) => {
+                const sel = compressionLevel === id;
                 return (
                   <div
-                    key={level.id}
-                    onClick={() => setCompressionLevel(level.id)}
+                    key={id}
+                    onClick={() => setCompressionLevel(id)}
                     style={{
-                      borderRadius: 20,
-                      padding: '14px 12px',
-                      background: isSelected ? level.selectedBg : level.bg,
-                      boxShadow: isSelected
-                        ? `0 8px 0px ${level.selectedShadow}, 0 22px 55px ${level.shadow}, inset 0 -10px 22px ${level.shadow}, inset 0 10px 22px rgba(255,255,255,0.95)`
-                        : `0 4px 0px ${level.shadow.replace('0.4', '0.25')}, 0 12px 30px ${level.shadow.replace('0.4', '0.2')}, inset 0 -6px 14px ${level.shadow.replace('0.4', '0.18')}, inset 0 6px 14px rgba(255,255,255,0.85)`,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s cubic-bezier(0.34,1.2,0.64,1)',
-                      transform: isSelected
-                        ? 'translateY(-4px) scale(1.02)'
-                        : 'translateY(0) scale(1)',
-                      textAlign: 'center',
+                      borderRadius: 14, padding: '16px 12px', cursor: 'pointer', textAlign: 'center',
                       position: 'relative',
+                      backgroundColor: sel ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${sel ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.06)'}`,
+                      boxShadow: sel ? '0 0 0 1px rgba(99,102,241,0.2) inset' : 'none',
+                      transform: sel ? 'translateY(-2px)' : 'none',
+                      transition: 'all 0.2s ease',
                     }}
                   >
-                    {isSelected && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: -6,
-                          right: -6,
-                          width: 22,
-                          height: 22,
-                          borderRadius: '50%',
-                          background: level.accent,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '0.7rem',
-                          color: 'white',
-                          fontWeight: 900,
-                          boxShadow: `0 3px 8px ${level.shadow}`,
-                        }}
-                      >
-                        ✓
+                    {sel && (
+                      <div style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Check size={10} strokeWidth={3} color="white" />
                       </div>
                     )}
-                    <div style={{ fontSize: '1.4rem', marginBottom: 4 }}>{level.emoji}</div>
-                    <p
-                      style={{
-                        fontWeight: 800,
-                        color: level.accent,
-                        fontSize: '0.85rem',
-                        margin: '0 0 2px',
-                      }}
-                    >
-                      {level.label}
-                    </p>
-                    <p
-                      style={{
-                        fontSize: '0.7rem',
-                        color: level.accent,
-                        opacity: 0.7,
-                        margin: '0 0 6px',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {level.sublabel}
-                    </p>
-                    <div
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: 8,
-                        background: 'rgba(255,255,255,0.6)',
-                        fontSize: '0.65rem',
-                        fontWeight: 700,
-                        color: level.accent,
-                        boxShadow: 'inset 0 1px 4px rgba(255,255,255,0.8)',
-                      }}
-                    >
-                      {level.reduction}
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+                      <Icon size={20} color={sel ? '#818CF8' : '#52525B'} strokeWidth={1.8} />
+                    </div>
+                    <p style={{ fontWeight: 700, color: sel ? '#C7D2FE' : '#A1A1AA', fontSize: '0.85rem', margin: '0 0 2px' }}>{label}</p>
+                    <p style={{ fontSize: '0.7rem', color: sel ? '#818CF8' : '#52525B', margin: '0 0 8px', fontWeight: 500 }}>{sublabel}</p>
+                    <div style={{ padding: '3px 6px', borderRadius: 6, background: sel ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)', border: `1px solid ${sel ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.06)'}`, fontSize: '0.62rem', fontWeight: 700, color: sel ? '#818CF8' : '#52525B' }}>
+                      {reduction}
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* 3C — What Gets Removed */}
-            <div
-              style={{
-                borderRadius: 16,
-                padding: '12px 16px',
-                marginBottom: 20,
-                background: 'rgba(255,255,255,0.15)',
-                border: '1px solid rgba(255,255,255,0.25)',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 10,
-              }}
-            >
-              <span style={{ fontSize: '1rem', flexShrink: 0, marginTop: 1 }}>🧹</span>
-              <div>
-                <p
-                  style={{
-                    color: 'rgba(255,255,255,0.95)',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    margin: '0 0 3px',
-                  }}
-                >
-                  How it works:
-                </p>
-                <p
-                  style={{
-                    color: 'rgba(255,255,255,0.75)',
-                    fontSize: '0.75rem',
-                    margin: 0,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {compressionLevel === 'screen'
-                    ? 'Pages are re-rendered as aggressively compressed JPEG images at screen resolution. Fonts, vectors, and metadata are stripped for maximum size reduction.'
-                    : compressionLevel === 'ebook'
-                    ? 'Pages are re-rendered as quality JPEG images at standard resolution. Good balance of file size and visual clarity.'
-                    : 'Pages are re-rendered at high resolution and quality. Metadata is stripped while preserving visual fidelity for print.'}
-                </p>
-              </div>
-            </div>
+       
 
-            {/* 3D — Compress Button */}
-            <button
-              onClick={handleCompress}
-              disabled={!pdfFile || processing}
-              style={{
-                width: '100%',
-                padding: 16,
-                borderRadius: 20,
-                border: 'none',
-                background: processing
-                  ? 'linear-gradient(160deg, #94A3B8, #64748B)'
-                  : 'linear-gradient(160deg, #22C55E, #16A34A)',
-                color: 'white',
-                fontWeight: 800,
-                fontSize: '1.05rem',
-                cursor: processing ? 'not-allowed' : 'pointer',
-                boxShadow: processing
-                  ? 'none'
-                  : '0 6px 0px rgba(21,128,61,0.55), 0 16px 40px rgba(22,163,74,0.45), inset 0 -6px 14px rgba(21,128,61,0.35), inset 0 6px 14px rgba(187,247,208,0.4)',
-                transition:
-                  'transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-              onMouseEnter={(e) => {
-                if (!processing)
-                  e.currentTarget.style.transform = 'translateY(-4px) scale(1.01)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-              }}
-            >
-              {processing ? (
-                <>
-                  <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />{' '}
-                  Compressing... {progress}%
-                </>
-              ) : (
-                <>
-                  🗜️ Compress PDF —{' '}
-                  {compressionLevel === 'screen'
-                    ? 'Maximum'
-                    : compressionLevel === 'ebook'
-                    ? 'Balanced'
-                    : 'Light'}
-                </>
-              )}
-            </button>
+            {/* Compress button — MotionButton (content-sized, not full-bleed) */}
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <MotionButton
+                type="button"
+                onClick={handleCompress}
+                disabled={!pdfFile || processing}
+                loading={processing}
+                label={
+                  processing
+                    ? `Compressing… ${progress}%`
+                    : `Compress — ${LEVEL_LABELS[compressionLevel]}`
+                }
+                style={{ width: 'max-content', maxWidth: '100%', minWidth: 200 }}
+              />
+            </div>
           </>
         )}
       </div>
 
-      {/* ═══════════════════════════════════════════════════════
-          SECTION 4 — PROCESSING OVERLAY
-          ═══════════════════════════════════════════════════════ */}
-      {processing && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 50,
-            background: 'rgba(5, 46, 22, 0.75)',
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 24,
-          }}
-        >
-          <div
-            style={{
-              borderRadius: 36,
-              padding: '40px 36px',
-              textAlign: 'center',
-              maxWidth: 340,
-              width: '100%',
-              background: 'linear-gradient(145deg, #D1FAE5, #A7F3D0)',
-              boxShadow:
-                '0 12px 0px rgba(21,128,61,0.4), 0 36px 90px rgba(22,163,74,0.5), inset 0 -14px 32px rgba(22,163,74,0.28), inset 0 14px 32px rgba(255,255,255,0.95)',
-            }}
-          >
-            {/* Animated icon */}
-            <div
-              style={{
-                width: 72,
-                height: 72,
-                borderRadius: 22,
-                margin: '0 auto 20px',
-                background: '#BBF7D0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '2rem',
-                boxShadow:
-                  '0 6px 0px rgba(21,128,61,0.38), 0 16px 40px rgba(22,163,74,0.3), inset 0 -6px 14px rgba(22,163,74,0.25), inset 0 6px 14px rgba(255,255,255,0.95)',
-                animation: 'pulse 1.5s ease-in-out infinite',
-              }}
-            >
-              🗜️
-            </div>
+      {/* ── Processing overlay (always in DOM — avoids compositor flicker) ── */}
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.75)',
+        backdropFilter: processing ? 'blur(8px)' : 'none',
+        opacity: processing ? 1 : 0,
+        pointerEvents: processing ? 'auto' : 'none',
+        transition: 'opacity 0.18s ease',
+        willChange: 'opacity',
+      }}>
+        <div style={{
+          borderRadius: 20, padding: '40px 32px', textAlign: 'center',
+          width: '100%', maxWidth: 360, margin: '0 16px',
+          background: '#1C1D21', border: '1px solid rgba(255,255,255,0.1)',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)', position: 'relative', overflow: 'hidden',
+        }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 0%, rgba(99,102,241,0.15) 0%, transparent 60%)', pointerEvents: 'none' }} />
 
-            <h3
-              style={{
-                fontSize: '1.2rem',
-                fontWeight: 900,
-                color: '#14532D',
-                margin: '0 0 6px',
-              }}
-            >
-              Compressing PDF
-            </h3>
-            <p
-              style={{
-                color: '#166534',
-                fontSize: '0.85rem',
-                margin: '0 0 20px',
-                lineHeight: 1.5,
-              }}
-            >
-              Optimizing structure and removing metadata...
-            </p>
+          <div style={{ position: 'relative', zIndex: 10 }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: '50%',
+              background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px', animation: 'bounce 1s infinite',
+            }}>
+              <Loader2 size={28} strokeWidth={1.8} color="#818cf8" style={{ animation: 'spin 1s linear infinite' }} />
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white', marginBottom: 6 }}>Compressing PDF</h3>
+            <p style={{ color: '#A1A1AA', fontSize: '0.85rem', marginBottom: 24 }}>Running locally in your browser...</p>
 
             {/* Progress bar */}
-            <div
-              style={{
-                width: '100%',
-                height: 10,
-                borderRadius: 999,
-                background: 'rgba(21,128,61,0.15)',
-                boxShadow: 'inset 0 2px 6px rgba(21,128,61,0.2)',
-                overflow: 'hidden',
-                marginBottom: 8,
-              }}
-            >
-              <div
-                style={{
-                  height: '100%',
-                  borderRadius: 999,
-                  background: 'linear-gradient(90deg, #22C55E, #16A34A)',
-                  width: `${progress}%`,
-                  transition: 'width 0.4s ease',
-                  boxShadow: '0 0 10px rgba(34,197,94,0.6)',
-                }}
-              />
+            <div style={{ width: '100%', background: 'rgba(255,255,255,0.06)', borderRadius: 999, height: 8, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, #4338CA, #818CF8)', borderRadius: 999, transition: 'width 0.4s ease' }} />
             </div>
-            <p style={{ fontSize: '0.85rem', color: '#15803D', fontWeight: 700 }}>
-              {progress}%
-            </p>
+            <p style={{ fontSize: '0.85rem', color: '#818CF8', fontWeight: 600, marginTop: 10 }}>{progress}%</p>
 
-            {/* Step checklist */}
+            {/* Step list */}
             <div style={{ marginTop: 16, textAlign: 'left' }}>
-              {[
-                { label: 'Loading PDF', threshold: 20 },
-                { label: 'Stripping metadata', threshold: 50 },
-                { label: 'Optimizing structure', threshold: 80 },
-                { label: 'Finalizing output', threshold: 100 },
-              ].map((step, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    marginBottom: 6,
-                    opacity: progress >= i * 25 ? 1 : 0.35,
-                    transition: 'opacity 0.3s ease',
-                  }}
-                >
-                  <span style={{ fontSize: '0.85rem' }}>
-                    {progress >= step.threshold ? '✅' : '⏳'}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '0.78rem',
-                      color: '#166534',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {step.label}
-                  </span>
+              {PROCESSING_STEPS.map((step, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, opacity: progress >= i * 25 ? 1 : 0.35, transition: 'opacity 0.3s ease' }}>
+                  <div style={{
+                    width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+                    background: progress >= step.threshold ? '#6366f1' : 'rgba(255,255,255,0.06)',
+                    border: `2px solid ${progress >= step.threshold ? '#818CF8' : 'rgba(255,255,255,0.15)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.3s ease',
+                  }}>
+                    {progress >= step.threshold && <Check size={8} strokeWidth={3} color="white" />}
+                  </div>
+                  <span style={{ fontSize: '0.78rem', color: progress >= step.threshold ? '#C7D2FE' : '#6B7280', fontWeight: 500, transition: 'color 0.3s ease' }}>{step.label}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
-      )}
+      </div>
+
+      <style>{`
+        @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes spin   { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }

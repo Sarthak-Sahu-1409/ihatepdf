@@ -23,6 +23,10 @@ export interface MotionButtonProps extends ButtonHTMLAttributes<HTMLButtonElemen
 const FILL_PRIMARY = '#e4e4e7';   // zinc-200 — light disc, readable arrow on dark bg
 const FILL_SECONDARY = '#8b5cf6'; // violet-500
 
+/** Inner padding (px). Fill layer and collapsed disc align to these insets. */
+const PAD_X = 10;
+const PAD_Y = 8;
+
 // Input: MotionButtonProps + standard button attrs. Output: pill with sliding fill and icon.
 // forwardRef so callers (e.g. form libs) can get a ref to the underlying <button>.
 export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
@@ -57,12 +61,14 @@ export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
       display: 'inline-flex',
       flexDirection: 'row',
       alignItems: 'center',
-      height: 56,
+      gap: 12,
+      minHeight: PAD_Y * 2 + 46,
       minWidth: 220,
       borderRadius: 9999,
       border: '1px solid rgba(255,255,255,0.12)',
       background: 'rgba(255,255,255,0.06)',
-      padding: 4,
+      padding: `${PAD_Y}px ${PAD_X}px`,
+      boxSizing: 'border-box',
       cursor: disabled ? 'not-allowed' : 'pointer',
       overflow: 'hidden',
       opacity: disabled && !loading ? 0.5 : 1,
@@ -74,10 +80,10 @@ export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
 
     const fillStyle: CSSProperties = {
       position: 'absolute',
-      top: 4,
-      left: 4,
-      height: 'calc(100% - 8px)',
-      width: isExpanded ? 'calc(100% - 8px)' : 46,
+      top: PAD_Y,
+      left: PAD_X,
+      height: `calc(100% - ${PAD_Y * 2}px)`,
+      width: isExpanded ? `calc(100% - ${PAD_X * 2}px)` : 46,
       borderRadius: 9999,
       background: fillColor,
       transition: 'width 0.45s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -101,9 +107,8 @@ export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
     const labelStyle: CSSProperties = {
       position: 'relative',
       zIndex: 1,
-      flex: 1,
-      paddingRight: 20,
-      textAlign: 'center',
+      flex: '0 1 auto',
+      textAlign: 'left',
       fontSize: '1rem',
       fontWeight: 600,
       letterSpacing: '-0.015em',

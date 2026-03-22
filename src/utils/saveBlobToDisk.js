@@ -4,26 +4,6 @@
  */
 export const SAVE_RESULT_BROWSER = 'browser';
 
-// Input: filename string. Output: File System Access API `types` array.
-// Chooses PDF or generic accept entries from the file extension.
-function pickerTypesForFilename(filename) {
-  const lower = (filename || 'download').toLowerCase();
-  if (lower.endsWith('.pdf')) {
-    return [
-      {
-        description: 'PDF',
-        accept: { 'application/pdf': ['.pdf'] },
-      },
-    ];
-  }
-  return [
-    {
-      description: 'File',
-      accept: { '*/*': [] },
-    },
-  ];
-}
-
 // Input: blob (Blob), filename (string). Output: void.
 // Programmatically clicks a temporary anchor; the OS/browser dialog outcome is not exposed to JS.
 export function saveBlobViaAnchor(blob, filename) {
@@ -41,27 +21,9 @@ export function saveBlobViaAnchor(blob, filename) {
   }
 }
 
-// Input: blob (Blob), filename (string). Output: Promise true | false | SAVE_RESULT_BROWSER.
-// Save picker when supported (true = saved, false = user dismissed); otherwise anchor download returns SAVE_RESULT_BROWSER.
-export async function saveBlobToDisk(blob, filename) {
-  const name = filename || 'download.pdf';
-
-  if (typeof window !== 'undefined' && window.showSaveFilePicker) {
-    try {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: name,
-        types: pickerTypesForFilename(name),
-      });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      return true;
-    } catch (err) {
-      if (err?.name === 'AbortError') return false;
-      console.warn('saveBlobToDisk: picker failed, falling back to anchor', err);
-    }
-  }
-
-  saveBlobViaAnchor(blob, name);
+// Input: blob (Blob), filename (string). Output: SAVE_RESULT_BROWSER.
+// Triggers an immediate browser anchor download. Returns SAVE_RESULT_BROWSER so callers can show confirmation UI.
+export function saveBlobToDisk(blob, filename) {
+  saveBlobViaAnchor(blob, filename || 'download.pdf');
   return SAVE_RESULT_BROWSER;
 }
