@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowLeft, X, Loader2, FileText,
+  ArrowLeft, X, FileText,
   TrendingDown, BarChart2, TrendingUp, Sparkles,
   AlertTriangle, Check, Download, Lock,
 } from 'lucide-react';
+import ProgressBar from '../components/common/ProgressBar';
 import { UploadCard } from '../components/ui/upload-ui';
 import { DownloadButton } from '../components/ui/download-animation';
 import { saveBlobToDisk, SAVE_RESULT_BROWSER } from '../utils/saveBlobToDisk';
@@ -567,22 +568,14 @@ export default function PDFtoJPG() {
         }}>
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 0%, rgba(59,130,246,0.15) 0%, transparent 60%)', pointerEvents: 'none' }} />
           <div style={{ position: 'relative', zIndex: 10 }}>
-            <div style={{
-              width: 64, height: 64, borderRadius: '50%',
-              background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 20px', animation: 'bounce 1s infinite',
-            }}>
-              <Loader2 size={28} strokeWidth={1.8} color="#60A5FA" style={{ animation: 'spin 1s linear infinite' }} />
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+              <ProgressBar color="#3B82F6" size={70} />
             </div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white', marginBottom: 6 }}>Converting to JPG</h3>
-            <p style={{ color: '#A1A1AA', fontSize: '0.85rem', marginBottom: 24 }}>
+            <p style={{ color: '#A1A1AA', fontSize: '0.85rem', marginBottom: 20 }}>
               Rendering page {currentPage} of {getPageCountToConvert()}
             </p>
-            <div style={{ width: '100%', background: 'rgba(255,255,255,0.06)', borderRadius: 999, height: 8, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, #1D4ED8, #60A5FA)', borderRadius: 999, transition: 'width 0.4s ease' }} />
-            </div>
-            <p style={{ fontSize: '0.85rem', color: '#60A5FA', fontWeight: 600, marginTop: 10, marginBottom: completedThumbs.length ? 16 : 0 }}>{progress}%</p>
+            <p style={{ fontSize: '1rem', color: '#60A5FA', fontWeight: 700, marginBottom: completedThumbs.length ? 16 : 0 }}>{progress}%</p>
             {completedThumbs.length > 0 && (
               <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap', maxHeight: 72, overflow: 'hidden' }}>
                 {completedThumbs.slice(-6).map((thumb, i) => (
