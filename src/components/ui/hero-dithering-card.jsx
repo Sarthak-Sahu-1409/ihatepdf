@@ -8,31 +8,20 @@
  * - `accentColor` defaults to the site's indigo to match theme
  */
 import { useState, Suspense, lazy } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
 
 const Dithering = lazy(() =>
   import('@paper-design/shaders-react').then((mod) => ({ default: mod.Dithering }))
 );
 
-export interface HeroDitheringCardProps {
-  /** Content rendered inside the card. */
-  children: ReactNode;
-  /** Shader foreground colour. Defaults to site indigo. */
-  accentColor?: string;
-  /** Minimum card height in px. */
-  minHeight?: number;
-  /** Extra styles applied to the outer wrapper. */
-  style?: CSSProperties;
-}
-
-// Input: HeroDitheringCardProps. Output: rounded card with animated dithering background.
+// Input: props with children, accentColor, minHeight, style.
+// Output: rounded card with animated dithering background.
 // Speed increases on hover for a subtle interactive feel.
 export function HeroDitheringCard({
   children,
   accentColor = '#6366f1',
   minHeight = 460,
   style,
-}: HeroDitheringCardProps) {
+}) {
   const [hovered, setHovered] = useState(false);
 
   return (

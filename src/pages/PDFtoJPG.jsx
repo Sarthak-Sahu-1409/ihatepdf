@@ -8,7 +8,6 @@ import {
 import { UploadCard } from '../components/ui/upload-ui';
 import { DownloadButton } from '../components/ui/download-animation';
 import { saveBlobToDisk, SAVE_RESULT_BROWSER } from '../utils/saveBlobToDisk';
-import { useWorker } from '../hooks/useWorker';
 import MotionButton from '../components/ui/motion-button';
 import { HeroDitheringCard } from '../components/ui/hero-dithering-card';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -44,6 +43,8 @@ export default function PDFtoJPG() {
   const [currentPage, setCurrentPage]       = useState(0);
   const [completedThumbs, setCompletedThumbs] = useState([]);
   const [error, setError]                   = useState(null);
+  const [processing, setProcessing]         = useState(false);
+  const [progress, setProgress]             = useState(0);
 
   /* ── success ──────────────────────────────────────────── */
   const [isSuccess, setIsSuccess]       = useState(false);
@@ -52,9 +53,6 @@ export default function PDFtoJPG() {
 
   const fileInputRef = useRef(null);
   const pdfDocRef    = useRef(null);
-
-  // Web Worker for off-main-thread conversion
-  const { run: runWorker, progress, running: processing } = useWorker('image');
 
   /* ── computed ─────────────────────────────────────────────── */
   const getPageCountToConvert = () =>
@@ -102,52 +100,85 @@ export default function PDFtoJPG() {
     if (file) handleFileLoad(file);
   };
 
-  /* ── convert (runs in Web Worker) ────────────────────── */
+  /* ── helper: canvas → JPEG blob ─────────────────────────── */
+  const canvasToJpegBlob = (canvas, q) =>
+    new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error('JPEG encode failed'))),
+        'image/jpeg',
+        q
+      );
+    });
+
+  /* ── convert (runs on main thread) ────────────────────── */
   const handleConvert = async () => {
-    if (!pdfFile) return;
+    if (!pdfFile || !pdfDocRef.current) return;
     setCurrentPage(0);
     setCompletedThumbs([]);
     setError(null);
+    setProcessing(true);
+    setProgress(0);
 
     try {
-      const { isLargeFile, processLargeFile } = await import('../utils/streamProcessor');
-      const arrayBuffer = isLargeFile(pdfFile)
-        ? await processLargeFile(pdfFile)
-        : await pdfFile.arrayBuffer();
-
+      const doc = pdfDocRef.current;
       const startPage = pageRangeMode === 'all' ? 1 : fromPage;
       const endPage   = pageRangeMode === 'all' ? pageCount : toPage;
-      const baseName = pdfFile.name.replace(/\.pdf$/i, '');
+      const total     = endPage - startPage + 1;
+      const baseName  = pdfFile.name.replace(/\.pdf$/i, '');
 
-      const bufferCopy = arrayBuffer.slice(0);
-      const result = await runWorker(
-        'pdfToJpg',
-        { buffer: bufferCopy, quality, startPage, endPage, outputScale: OUTPUT_SCALE },
-        [bufferCopy]
-      );
+      const outputs = [];
+      const thumbs  = [];
 
-      // Convert worker's ArrayBuffer results to Blob URLs for display
-      const outputs = result.data.map((item) => {
-        const blob = new Blob([item.jpegBuffer], { type: 'image/jpeg' });
-        const thumbBlob = new Blob([item.thumbBuffer], { type: 'image/jpeg' });
+      for (let i = startPage; i <= endPage; i++) {
+        setCurrentPage(i - startPage + 1);
+
+        const page = await doc.getPage(i);
+        const vp   = page.getViewport({ scale: OUTPUT_SCALE });
+
+        // Render page to a regular canvas
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(vp.width);
+        canvas.height = Math.round(vp.height);
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+
+        // Encode to JPEG
+        const blob = await canvasToJpegBlob(canvas, quality);
         const dataUrl = URL.createObjectURL(blob);
-        const thumbUrl = URL.createObjectURL(thumbBlob);
-        return {
+
+        // Small thumbnail for the progress overlay
+        const thumbScale = 0.25;
+        const tw = Math.round(vp.width * thumbScale);
+        const th = Math.round(vp.height * thumbScale);
+        const thumbCanvas = document.createElement('canvas');
+        thumbCanvas.width = tw; thumbCanvas.height = th;
+        thumbCanvas.getContext('2d').drawImage(canvas, 0, 0, tw, th);
+        const thumbBlob = await canvasToJpegBlob(thumbCanvas, 0.6);
+        const thumbUrl  = URL.createObjectURL(thumbBlob);
+
+        outputs.push({
           dataUrl,
           thumbUrl,
           blob,
-          pageNum: item.pageNum,
-          width: item.width,
-          height: item.height,
-          filename: `${baseName}_page_${item.pageNum}.jpg`,
-        };
-      });
+          pageNum: i,
+          width: canvas.width,
+          height: canvas.height,
+          filename: `${baseName}_page_${i}.jpg`,
+        });
+        thumbs.push(thumbUrl);
+
+        setCompletedThumbs([...thumbs]);
+        setProgress(Math.round(((i - startPage + 1) / total) * 100));
+
+        // Yield to keep UI responsive
+        await new Promise((r) => setTimeout(r, 0));
+      }
 
       setOutputImages(outputs);
-      setCompletedThumbs(outputs.map((o) => o.thumbUrl));
       setIsSuccess(true);
     } catch (err) {
       setError(`Conversion failed: ${err.message}`);
+    } finally {
+      setProcessing(false);
     }
   };
 

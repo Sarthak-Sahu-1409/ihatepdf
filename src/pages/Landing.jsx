@@ -18,7 +18,6 @@ import { BsFileEarmarkZip } from 'react-icons/bs';
 import { BiSolidImageAlt } from 'react-icons/bi';
 import { RiPenNibFill } from 'react-icons/ri';
 import { IoWater } from 'react-icons/io5';
-import { BubbleText } from '../components/ui/bubble-text';
 import AnoAI from '../components/ui/animated-shader-background';
 
 export default function Landing() {

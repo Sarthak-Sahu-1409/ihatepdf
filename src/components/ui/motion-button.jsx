@@ -3,22 +3,9 @@
  *
  * Uses inline styles rather than Tailwind utilities so the animation is guaranteed
  * regardless of Tailwind's class-scan coverage (the rest of this codebase uses inline styles).
- * Tailwind utilities are only applied via the `classes` / `className` escape hatches.
  */
 import { forwardRef, useState } from 'react';
-import type { ButtonHTMLAttributes, CSSProperties } from 'react';
 import { ArrowRight, Loader2 } from 'lucide-react';
-import { cn } from '../../lib/utils';
-
-export interface MotionButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  label: string;
-  variant?: 'primary' | 'secondary';
-  /** Extra Tailwind classes applied to the root button (escape hatch). */
-  classes?: string;
-  animate?: boolean;
-  delay?: number;
-  loading?: boolean;
-}
 
 const FILL_PRIMARY = '#e4e4e7';   // zinc-200 — light disc, readable arrow on dark bg
 const FILL_SECONDARY = '#8b5cf6'; // violet-500
@@ -29,9 +16,10 @@ const PAD_Y = 8;
 /** Space between arrow disc and label (fixed so hover does not reflow text). */
 const ICON_LABEL_GAP = 10;
 
-// Input: MotionButtonProps + standard button attrs. Output: pill with sliding fill and icon.
+// Input: props with label, variant, classes, animate, delay, loading, disabled + standard button attrs.
+// Output: pill with sliding fill and icon.
 // forwardRef so callers (e.g. form libs) can get a ref to the underlying <button>.
-export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
+export const MotionButton = forwardRef(
   (
     {
       label,
@@ -58,7 +46,10 @@ export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
     const isBusy = loading || disabled;
     const isExpanded = hovered && !isBusy;
 
-    const rootStyle: CSSProperties = {
+    // Merge class names without tailwind-merge dependency
+    const mergedClassName = [classes, className].filter(Boolean).join(' ') || undefined;
+
+    const rootStyle = {
       position: 'relative',
       display: 'inline-flex',
       flexDirection: 'row',
@@ -81,7 +72,7 @@ export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
       ...externalStyle,
     };
 
-    const fillStyle: CSSProperties = {
+    const fillStyle = {
       position: 'absolute',
       top: PAD_Y,
       left: PAD_X,
@@ -91,11 +82,10 @@ export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
       background: fillColor,
       transition: 'width 0.45s cubic-bezier(0.4, 0, 0.2, 1)',
       zIndex: 0,
-      /* Keeps the growing pill vertically locked to the icon row (no optical drift). */
       pointerEvents: 'none',
     };
 
-    const iconWrapStyle: CSSProperties = {
+    const iconWrapStyle = {
       position: 'relative',
       zIndex: 1,
       display: 'flex',
@@ -107,7 +97,7 @@ export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
       color: arrowColor,
     };
 
-    const labelStyle: CSSProperties = {
+    const labelStyle = {
       position: 'relative',
       zIndex: 1,
       flex: '0 1 auto',
@@ -123,7 +113,6 @@ export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
       color: isExpanded ? labelHoverColor : labelIdleColor,
       transition: 'color 0.25s ease',
       userSelect: 'none',
-      /* Same padding in all states — avoids text sliding on hover. */
       paddingRight: 14,
       paddingLeft: 0,
       boxSizing: 'border-box',
@@ -134,7 +123,7 @@ export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
         ref={ref}
         type={type}
         disabled={disabled}
-        className={cn(classes, className)}
+        className={mergedClassName}
         style={rootStyle}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
