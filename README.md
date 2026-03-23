@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://ihatepdf-ssarthak1357-9069-sarthaks-projects-47c7820b.vercel.app/">
+  <a href="https://ihatepdf-git-main-sarthaks-projects-47c7820b.vercel.app/">
     <img src="https://img.shields.io/badge/🔗_Live_Demo-Visit_App-6366f1?style=for-the-badge" alt="Live Demo" />
   </a>
   &nbsp;
@@ -30,7 +30,7 @@ Unlike traditional PDF services that upload your documents to remote servers, **
 
 ### ⚡ 2. Near-Native Speed — Web Workers + WebAssembly
 
-Heavy PDF operations (rendering pages to high-res images, compressing, merging large files) are offloaded to **dedicated Web Workers** so the main UI thread stays buttery-smooth and fully responsive. Under the hood, `pdfjs-dist` ships its own **WebAssembly (WASM)** binary for parsing and rendering PDF pages at near-native speed. A custom `useWebWorker` React hook abstracts the Worker lifecycle — spawning, posting messages, listening for progress updates, and automatic termination on unmount — so every tool gets non-blocking, parallelised processing out of the box. Large files are fed through a **stream-based chunked reader** (`streamProcessor.js`) that slices files into 1 MB chunks, keeping peak memory consumption low even for 100 MB+ PDFs.
+Heavy PDF operations (rendering pages to high-res images, compressing, merging large files) are offloaded to **dedicated Web Workers** so the main UI thread stays buttery-smooth and fully responsive. Under the hood, `pdfjs-dist` ships its own **WebAssembly (WASM)** binary for parsing and rendering PDF pages at near-native speed, while `@jsquash/jpeg` is used for WASM-powered JPEG encoding. A custom `useWorker` React hook abstracts the Worker lifecycle — spawning, posting messages, listening for progress updates, and automatic termination on unmount — so every tool gets non-blocking, parallelised processing out of the box. Large files are fed through a **stream-based chunked reader** (`streamProcessor.js`) that slices files into 1 MB chunks, keeping peak memory consumption low even for 100 MB+ PDFs.
 
 ### 📴 3. Works Offline — Install as a PWA
 
@@ -64,7 +64,7 @@ There are **no accounts, no login walls, no tracking pixels, and no hidden paywa
 | **Build Tool** | Vite 7 (lightning-fast HMR + optimised production builds) |
 | **Styling** | Tailwind CSS 4 + custom Claymorphism design system |
 | **PDF Engine** | [`pdf-lib`](https://pdf-lib.js.org/) (create / modify), [`pdfjs-dist`](https://mozilla.github.io/pdf.js/) (render / parse, WASM-backed), `jspdf` (image → PDF) |
-| **Concurrency** | Web Workers via custom `useWebWorker` hook |
+| **Concurrency** | Web Workers via custom `useWorker` hook |
 | **PWA / Offline** | `vite-plugin-pwa` + Workbox (precache + runtime CDN cache) |
 | **File Handling** | `react-dropzone` (drag & drop), `file-saver` (downloads), chunked stream reader |
 | **Fonts** | `@fontsource` (Dancing Script, Pacifico, Satisfy, Pinyon Script) — fully offline |
@@ -109,7 +109,7 @@ pdf-tool/
     │   └── AppContext.jsx      # Global state (files, progress, errors) via useReducer
     │
     ├── hooks/
-    │   └── useWebWorker.js     # Custom hook — spawns Worker, posts tasks, relays progress
+    │   └── useWorker.js        # Custom hook — spawns Worker, posts tasks, relays progress
     │
     ├── pages/
     │   ├── Landing.jsx         # Homepage — tool carousel, highlights, feature cards
@@ -125,8 +125,8 @@ pdf-tool/
     │   └── streamProcessor.js  # Chunked file reader for large-file support (1 MB slices)
     │
     └── workers/
-        ├── pdfWorker.js        # Web Worker — PDF signing via pdf-lib (background thread)
-        └── imageWorker.js      # Web Worker — PDF → JPG rendering (pdfjs-dist WASM + OffscreenCanvas)
+        ├── pdf.worker.js       # Web Worker — PDF signing & basic processing
+        └── image.worker.js     # Web Worker — PDF ↔ Image processing (WASM + OffscreenCanvas)
 ```
 
 ---
@@ -137,8 +137,8 @@ pdf-tool/
 ┌──────────────────┐       postMessage()        ┌─────────────────────────┐
 │                  │  ────────────────────────►  │                         │
 │   Main Thread    │      { type, data }        │    Web Worker Thread    │
-│   (React UI)     │                            │    (pdfWorker.js /      │
-│                  │  ◄────────────────────────  │     imageWorker.js)     │
+│   (React UI)     │                            │    (pdf.worker.js /     │
+│                  │  ◄────────────────────────  │     image.worker.js)    │
 │                  │  { progress / result / err }│                         │
 └──────────────────┘                            └───────────┬─────────────┘
                                                             │
@@ -160,10 +160,10 @@ PDF parsing, page rendering, and image encoding are **CPU-intensive** tasks. Run
 | Technique | What It Does | Why It Matters |
 |---|---|---|
 | **Web Workers** | Run JavaScript in a **separate OS-level thread**, completely isolated from the UI thread. | The React interface stays interactive — progress bars animate, buttons respond, and users can navigate — while heavy PDF work happens in the background. |
-| **WebAssembly (WASM)** | `pdfjs-dist` compiles Mozilla's PDF.js core (originally C/C++) into a `.wasm` binary that the browser executes at **near-native speed**. | Rendering complex vector graphics, decoding compressed image streams, and parsing large (100+ page) documents runs **5–10× faster** than equivalent pure-JavaScript code. |
-| **`useWebWorker` Hook** | A custom React hook that manages the full worker lifecycle — spawn on mount, post tasks, stream real-time progress, and auto-terminate on unmount. | Every tool page gets non-blocking, parallelised processing with zero boilerplate. |
+| **WebAssembly (WASM)** | `pdfjs-dist` uses a `.wasm` binary for parsing/rendering PDFs at near-native speed, while `@jsquash/jpeg` is used for extremely fast WASM-based JPG encoding. | Rendering complex vector graphics, decoding/encoding compressed image streams, and parsing large (100+ page) documents runs **5–10× faster** than equivalent pure-JavaScript code. |
+| **`useWorker` Hook** | A custom React hook that manages the full worker lifecycle — spawn on mount, post tasks, stream real-time progress, and auto-terminate on unmount. | Every tool page gets non-blocking, parallelised processing with zero boilerplate. |
 | **Chunked Stream Processing** | `streamProcessor.js` reads files exceeding 10 MB in **1 MB slices** instead of loading the entire blob into memory. | Keeps the memory footprint predictable and prevents browser tab crashes on very large PDFs. |
-| **OffscreenCanvas** | `imageWorker.js` uses `OffscreenCanvas` inside the worker to render PDF pages to JPEG — no DOM access required. | Rendering and JPEG encoding happen entirely off-thread without touching the main-thread canvas pool. |
+| **OffscreenCanvas** | `image.worker.js` uses `OffscreenCanvas` inside the worker to render PDF pages or scale images — no DOM access required. | Rendering and JPEG encoding happen entirely off-thread without touching the main-thread canvas pool. |
 
 **The net result:** users get a snappy, responsive UI with real-time progress feedback, even while processing large or complex PDF files — all without a single byte ever leaving their machine.
 
@@ -195,7 +195,7 @@ npm run preview
 
 ## 🌐 Live Demo
 
-**👉 [https://ihatepdf-ssarthak1357-9069-sarthaks-projects-47c7820b.vercel.app/](https://ihatepdf-ssarthak1357-9069-sarthaks-projects-47c7820b.vercel.app/)**
+**👉 [https://ihatepdf-git-main-sarthaks-projects-47c7820b.vercel.app/](https://ihatepdf-git-main-sarthaks-projects-47c7820b.vercel.app/)**
 
 ---
 
