@@ -22,23 +22,12 @@
 
 ---
 
-## ✨ Top 4 Highlights
+## ✨ Highlights
 
-### 🔒 1. 100 % Private — Your Files Never Leave Your Device
-
-Unlike traditional PDF services that upload your documents to remote servers, **IHatePDF processes every single file locally inside your browser**. The application has **zero backend** — there is no server, no API endpoint, and no cloud function that ever touches your data. PDF parsing, image rendering, compression, and signing all happen via in-browser JavaScript libraries (`pdf-lib`, `pdfjs-dist`, `jspdf`). This means sensitive contracts, tax documents, and personal IDs remain on your machine at all times, making the tool inherently GDPR-compliant with no data-processing agreement required.
-
-### ⚡ 2. Near-Native Speed — Web Workers + WebAssembly
-
-Heavy PDF operations (rendering pages to high-res images, compressing, merging large files) are offloaded to **dedicated Web Workers** so the main UI thread stays buttery-smooth and fully responsive. Under the hood, `pdfjs-dist` ships its own **WebAssembly (WASM)** binary for parsing and rendering PDF pages at near-native speed, while `@jsquash/jpeg` is used for WASM-powered JPEG encoding. A custom `useWorker` React hook abstracts the Worker lifecycle — spawning, posting messages, listening for progress updates, and automatic termination on unmount — so every tool gets non-blocking, parallelised processing out of the box. Large files are fed through a **stream-based chunked reader** (`streamProcessor.js`) that slices files into 1 MB chunks, keeping peak memory consumption low even for 100 MB+ PDFs.
-
-### 📴 3. Works Offline — Install as a PWA
-
-IHatePDF is a full **Progressive Web App** powered by **Workbox** (via `vite-plugin-pwa`). On the first visit, the service worker pre-caches all application assets — HTML, JS bundles, CSS, WASM workers, and even CDN emoji images — so subsequent visits and all PDF operations work **without any internet connection**. The `OfflineIndicator` component detects connectivity changes in real time and reassures users that every tool still functions while offline. You can install the app to your home screen on mobile or desktop and use it like a native application.
-
-### 🚫 4. No Sign-Up — Zero Friction
-
-There are **no accounts, no login walls, no tracking pixels, and no hidden paywalls**. You open the URL (or the installed PWA) and immediately start working. The app stores nothing — no cookies, no analytics, no local-storage tokens — making it one of the few truly friction-free PDF utilities on the web.
+- **🔒 100% Private & Serverless:** All parsing, compression, and signing happens locally right in your browser. No remote uploads exist.
+- **⚡ WASM-Accelerated:** Offloads heavy graphical and processing operations to Web Workers utilizing WebAssembly (`@jsquash/jpeg`, `pdfjs-dist`) for near-native desktop speeds.
+- **🎨 Premium Animated UI:** Built with Framer Motion and custom Three.js WebGL shaders to deliver a sleek, highly-responsive, micro-animated user experience.
+- **📴 Offline Ready PWA:** Fully installable logic. Works dependably without an internet connection.
 
 ---
 
@@ -46,13 +35,13 @@ There are **no accounts, no login walls, no tracking pixels, and no hidden paywa
 
 | Tool | Route | Description |
 |---|---|---|
-| 📄 **Merge PDF** | `/merge` | Combine multiple PDFs into a single document. Drag to reorder files, cherry-pick individual pages, and preview thumbnails before merging. |
-| ✂️ **Split PDF** | `/split` | Extract pages three ways — visual thumbnail picker, typed page ranges, or split every page into its own file. |
-| 🗜️ **Compress PDF** | `/compress` | Reduce file size with three compression levels (Maximum, Balanced, Light). Pages are rasterised to JPEG via canvas and re-packed with pdf-lib, always returning the smallest result. |
-| 🖼️ **PDF → JPG** | `/pdf-to-jpg` | Convert every page (or a custom range) to high-resolution JPEG images. Choose DPI, quality, and download individually or all at once with live preview. |
-| 📸 **JPG → PDF** | `/jpg-to-pdf` | Turn JPG, PNG, WebP, and HEIC images into a polished PDF. Full layout control — page size, fit mode, margins, and image quality with drag-to-reorder. |
-| ✍️ **Sign PDF** | `/sign` | Draw, type (four font styles), or upload a PNG signature. Drag to position, resize, set opacity, and embed on any page. |
-| 💧 **Watermark PDF** | `/watermark` | Stamp text or image watermarks with full design control — font size, colour, opacity, rotation, and a 3×3 position grid. Preset stamps (DRAFT, CONFIDENTIAL, APPROVED…) for quick use. Apply to all pages, odd/even, first/last, or a custom range with live canvas preview. |
+| 📄 **Merge PDF** | `/merge` | Drag-and-drop to seamlessly combine multiple PDF files into one streamlined document. |
+| ✂️ **Split PDF** | `/split` | Visually isolate and extract specific pages from a PDF to create your new file. |
+| 🗜️ **Compress PDF** | `/compress` | Reduce file sizes out of the box efficiently via background-threaded WASM JPEG encoding presets. |
+| 🖼️ **PDF → JPG** | `/pdf-to-jpg` | Instantly rasterize PDF pages into high-quality JPEG images via `OffscreenCanvas`. |
+| 📸 **JPG → PDF** | `/jpg-to-pdf` | Neatly convert your local images (PNG, WebP, JPEG, HEIC) back into a sleek standard PDF. |
+| ✍️ **Sign PDF** | `/sign` | Digitally sign documents securely by drawing, typing, or uploading a signature overlay. |
+| 💧 **Watermark PDF** | `/watermark` | Stamp customized text or image watermarks intuitively across your documents. |
 
 ---
 
@@ -62,13 +51,14 @@ There are **no accounts, no login walls, no tracking pixels, and no hidden paywa
 |---|---|
 | **UI Framework** | React 19 with lazy-loaded routes via React Router v7 |
 | **Build Tool** | Vite 7 (lightning-fast HMR + optimised production builds) |
-| **Styling** | Tailwind CSS 4 + custom Claymorphism design system |
-| **PDF Engine** | [`pdf-lib`](https://pdf-lib.js.org/) (create / modify), [`pdfjs-dist`](https://mozilla.github.io/pdf.js/) (render / parse, WASM-backed), `jspdf` (image → PDF) |
+| **Styling** | Tailwind CSS 4 + Tailwind Merge (`tailwind-merge`) + `clsx` |
+| **Animations / WebGL**| Framer Motion & Three.js (with custom WebGL shaders via `@paper-design/shaders`) |
+| **PDF & Images** | `pdf-lib` (create / modify), `pdfjs-dist` (render / parse, WASM-backed), `jspdf` (PDF generation), `@jsquash/jpeg` (ultra-fast WASM JPEG encoder) |
 | **Concurrency** | Web Workers via custom `useWorker` hook |
 | **PWA / Offline** | `vite-plugin-pwa` + Workbox (precache + runtime CDN cache) |
 | **File Handling** | `react-dropzone` (drag & drop), `file-saver` (downloads), chunked stream reader |
 | **Fonts** | `@fontsource` (Dancing Script, Pacifico, Satisfy, Pinyon Script) — fully offline |
-| **Icons** | Lucide React + Fluent UI 3D Emoji (CDN-cached offline) |
+| **Icons** | Lucide React + React Icons (`react-icons`) + Fluent UI 3D Emoji (CDN-cached offline) |
 | **Deployment** | Vercel (zero-config, edge CDN) |
 
 ---
@@ -91,19 +81,24 @@ pdf-tool/
 └── src/
     ├── main.jsx                # React DOM root — mounts <App />
     ├── App.jsx                 # Router setup — lazy-loads all 7 tool pages
-    ├── App.css                 # Global & clay-morphism styles
-    ├── index.css               # Tailwind directives & base resets
+    ├── index.css               # Global styles, Tailwind directives & animations
+    │
+    ├── assets/                 # Static assets like images and fonts
     │
     ├── components/
-    │   ├── ErrorBoundary.jsx           # Catches rendering errors gracefully
     │   ├── common/
-    │   │   ├── FileUploader.jsx        # Drag-and-drop file picker (react-dropzone)
     │   │   ├── Loading.jsx             # Suspense fallback spinner
-    │   │   ├── OfflineIndicator.jsx    # Real-time online / offline banner
     │   │   └── ProgressBar.jsx         # Animated processing progress bar
     │   ├── features/
     │   │   └── SignaturePad.jsx        # Canvas-based signature drawing pad
-    │   └── layout/                     # Shared layout / navigation shells
+    │   └── ui/                         # Advanced premium UI components (Motion, WebGL)
+    │       ├── future-navbar.jsx       # Floating animated navigation bar
+    │       ├── animated-shader-background.jsx # Three.js WebGL animated background
+    │       ├── upload-ui.jsx           # Drag-and-drop animated file picker
+    │       └── ...                     # Other interactive UI chunks
+    │
+    ├── lib/
+    │   └── utils.js                    # Utility functions for styling (e.g. cn tailwind merge)
     │
     ├── context/
     │   └── AppContext.jsx      # Global state (files, progress, errors) via useReducer
@@ -122,6 +117,8 @@ pdf-tool/
     │   └── WatermarkPDF.jsx    # Overlay text watermark on PDF pages
     │
     ├── utils/
+    │   ├── formatFileSize.js   # Human-readable file size formatter
+    │   ├── saveBlobToDisk.js   # Utility for downloading blobs to local filesystem
     │   └── streamProcessor.js  # Chunked file reader for large-file support (1 MB slices)
     │
     └── workers/
@@ -131,41 +128,17 @@ pdf-tool/
 
 ---
 
-## ⚙️ How Web Workers & WebAssembly Make It Fast
+## ⚙️ Architecture: Fast Processing & WebGL UIs
 
-```
-┌──────────────────┐       postMessage()        ┌─────────────────────────┐
-│                  │  ────────────────────────►  │                         │
-│   Main Thread    │      { type, data }        │    Web Worker Thread    │
-│   (React UI)     │                            │    (pdf.worker.js /     │
-│                  │  ◄────────────────────────  │     image.worker.js)    │
-│                  │  { progress / result / err }│                         │
-└──────────────────┘                            └───────────┬─────────────┘
-                                                            │
-                                                            │  delegates to
-                                                            ▼
-                                                ┌─────────────────────────┐
-                                                │   pdfjs-dist WASM       │
-                                                │   (compiled C/C++       │
-                                                │    PDF renderer)        │
-                                                └─────────────────────────┘
-```
+To prevent the dynamic React UI (and deep 3D WebGL animations) from freezing during heavy file processing, the app implements a highly-parallel architecture utilizing Web Workers and WASM. 
 
-### The Problem
-
-PDF parsing, page rendering, and image encoding are **CPU-intensive** tasks. Running them on the browser's main thread would freeze the UI — buttons stop responding, animations stutter, and the browser may show a "page unresponsive" dialog.
-
-### The Solution
-
-| Technique | What It Does | Why It Matters |
+| Layer | Responsibility | Performance Benefits |
 |---|---|---|
-| **Web Workers** | Run JavaScript in a **separate OS-level thread**, completely isolated from the UI thread. | The React interface stays interactive — progress bars animate, buttons respond, and users can navigate — while heavy PDF work happens in the background. |
-| **WebAssembly (WASM)** | `pdfjs-dist` uses a `.wasm` binary for parsing/rendering PDFs at near-native speed, while `@jsquash/jpeg` is used for extremely fast WASM-based JPG encoding. | Rendering complex vector graphics, decoding/encoding compressed image streams, and parsing large (100+ page) documents runs **5–10× faster** than equivalent pure-JavaScript code. |
-| **`useWorker` Hook** | A custom React hook that manages the full worker lifecycle — spawn on mount, post tasks, stream real-time progress, and auto-terminate on unmount. | Every tool page gets non-blocking, parallelised processing with zero boilerplate. |
-| **Chunked Stream Processing** | `streamProcessor.js` reads files exceeding 10 MB in **1 MB slices** instead of loading the entire blob into memory. | Keeps the memory footprint predictable and prevents browser tab crashes on very large PDFs. |
-| **OffscreenCanvas** | `image.worker.js` uses `OffscreenCanvas` inside the worker to render PDF pages or scale images — no DOM access required. | Rendering and JPEG encoding happen entirely off-thread without touching the main-thread canvas pool. |
+| **`useWorker` Hook** | Manages worker thread lifecycles dynamically from React. | Processes tasks entirely off-thread, maintaining buttery-smooth user interactions on complex UIs. |
+| **`image.worker.js`** | Interacts directly with `OffscreenCanvas`. | Offloads graphic scaling and WASM encoding/decoding via `@jsquash/jpeg` & `pdfjs-dist`. |
+| **`pdf.worker.js`** | Processes standard PDF byte buffering. | Handles core `pdf-lib` logic like splitting, merging, signing, and saving chunks without halting DOM animations. |
 
-**The net result:** users get a snappy, responsive UI with real-time progress feedback, even while processing large or complex PDF files — all without a single byte ever leaving their machine.
+By coupling the immense computing efficiency of **WebAssembly** alongside the true thread isolation of **Web Workers**, you achieve native data-processing speeds straight from the browser. 
 
 ---
 
