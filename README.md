@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://ihatepdf-git-main-sarthaks-projects-47c7820b.vercel.app/">
+  <a href="https://ihatepdf-git-new-sarthaks-projects-47c7820b.vercel.app/">
     <img src="https://img.shields.io/badge/🔗_Live_Demo-Visit_App-6366f1?style=for-the-badge" alt="Live Demo" />
   </a>
   &nbsp;
