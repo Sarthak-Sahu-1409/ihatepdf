@@ -183,7 +183,6 @@ export default function FutureNavbar() {
         .fn-container {
           height: 4.8rem; margin-top: 0.6rem; margin-left: 0.5rem; margin-right: 0.5rem;
           display: flex; width: calc(100% - 1rem); position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-          backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
         }
         .fn-shadow { filter: drop-shadow(0 25px 25px rgba(0,0,0,0.5)); }
         .fn-hidden { display: none !important; }
@@ -225,7 +224,6 @@ export default function FutureNavbar() {
           {/* Main nav logo + links area */}
           <div style={{ flex: 'none', height: '100%', padding: '0 3.5rem', position: 'relative', width: '100%' }} className="lg-w-auto">
             <Frame
-              enableBackdropBlur
               className="fn-shadow"
               paths={[
                 {
@@ -270,7 +268,6 @@ export default function FutureNavbar() {
           {/* Right End Graphic & Search (Hidden on Mobile) */}
           <div className="fn-hidden lg-flex" style={{ width: '100%', position: 'relative', marginLeft: '-25px', justifyContent: 'flex-end', paddingRight: '2rem' }}>
             <Frame
-              enableBackdropBlur
               className="fn-shadow"
               paths={[
                 {
