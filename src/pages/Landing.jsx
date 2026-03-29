@@ -18,7 +18,7 @@ import { BsFileEarmarkZip } from 'react-icons/bs';
 import { BiSolidImageAlt } from 'react-icons/bi';
 import { RiPenNibFill } from 'react-icons/ri';
 import { IoWater } from 'react-icons/io5';
-import AnoAI from '../components/ui/animated-shader-background';
+import { ShapeLandingHero } from '../components/ui/shape-landing-hero';
 
 export default function Landing() {
   /* ── Tool data with clay color variants and 3D Emojis ──── */
@@ -148,12 +148,12 @@ export default function Landing() {
   return (
     <div style={{ minHeight: '100vh', overflowX: 'hidden', fontFamily: "'Inter', system-ui, sans-serif", position: 'relative' }}>
 
-      {/* ── Animated Shader Background ──────────── */}
+      {/* ── Shape Landing Hero Background ───────── */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
-        <AnoAI />
+        <ShapeLandingHero />
       </div>
 
-      {/* ── Main Content (above shader) ─────────── */}
+      {/* ── Main Content ─────────────────────── */}
       <div style={{ position: 'relative', zIndex: 1 }}>
 
       {/* ── Navbar ─────────────────────────────── */}
