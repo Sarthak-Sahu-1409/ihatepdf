@@ -148,11 +148,17 @@ By coupling the immense computing efficiency of **WebAssembly** alongside the tr
 # Clone the repository
 git clone https://github.com/Sarthak-Sahu-1409/ihatepdf.git
 cd ihatepdf/pdf-tool
+```
 
+### Without Docker (Local Development)
+
+> **Requirements:** Node.js 18+ and npm.
+
+```bash
 # Install dependencies
 npm install
 
-# Start the dev server
+# Start the dev server (with hot-reload)
 npm run dev
 
 # Build for production
@@ -162,7 +168,40 @@ npm run build
 npm run preview
 ```
 
-> **Requirements:** Node.js 18+ recommended.
+### With Docker 🐳
+
+> **Requirements:** [Docker](https://docs.docker.com/get-docker/) installed and running.
+
+**Using Docker Compose (recommended):**
+
+```bash
+# Build and start in one command
+docker compose up --build
+
+# Or run in the background
+docker compose up --build -d
+
+# Stop the container
+docker compose down
+```
+
+**Using plain Docker:**
+
+```bash
+# Build the image
+docker build -t ihatepdf .
+
+# Run the container
+docker run -p 8080:80 ihatepdf
+
+# Or run in the background
+docker run -d -p 8080:80 --name ihatepdf ihatepdf
+
+# Stop & remove
+docker stop ihatepdf && docker rm ihatepdf
+```
+
+Once running, open **http://localhost:8080** in your browser.
 
 ---
 
