@@ -18,6 +18,7 @@ import { BsFileEarmarkZip } from 'react-icons/bs';
 import { BiSolidImageAlt } from 'react-icons/bi';
 import { RiPenNibFill } from 'react-icons/ri';
 import { IoWater } from 'react-icons/io5';
+import { MdRotate90DegreesCcw } from 'react-icons/md';
 import { ShapeLandingHero } from '../components/ui/shape-landing-hero';
 
 export default function Landing() {
@@ -84,6 +85,16 @@ export default function Landing() {
       accentColor: '#ca8a04',
     },
     {
+      name: 'Rotate PDF',
+      path: '/rotate',
+      emoji3D: 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@latest/assets/Counterclockwise%20arrows%20button/3D/counterclockwise_arrows_button_3d.png',
+      desc: 'Fix page orientation individually or in bulk.',
+      clayClass: 'clay-orange',
+      iconBg: '#FDBA74',
+      iconColor: '#9a3412',
+      accentColor: '#f97316',
+    },
+    {
       name: 'Watermark PDF',
       path: '/watermark',
       emoji3D: 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@latest/assets/Droplet/3D/droplet_3d.png',
@@ -142,6 +153,7 @@ export default function Landing() {
     <BiSolidImageAlt className="h-8 w-8 text-slate-600" />,
     <HiMiniDocumentArrowUp className="h-8 w-8 text-slate-600" />,
     <RiPenNibFill className="h-8 w-8 text-slate-600" />,
+    <MdRotate90DegreesCcw className="h-8 w-8 text-slate-600" />,
     <IoWater className="h-8 w-8 text-slate-600" />,
   ];
 
@@ -314,7 +326,7 @@ export default function Landing() {
                 </Link>
               </div>
             </div>
-            {/* Row 3 — 2 tools */}
+            {/* Row 3 — 3 tools: Sign, Rotate, Watermark */}
             <div style={{ margin: '0 auto', width: '100%', maxWidth: '40rem' }}>
               <div className="radar-row-wrap">
                 <Link to={tools[5].path} style={{ textDecoration: 'none' }}>
@@ -322,6 +334,9 @@ export default function Landing() {
                 </Link>
                 <Link to={tools[6].path} style={{ textDecoration: 'none' }}>
                   <IconContainer text={tools[6].name} delay={0.7} icon={toolIcons[6]} />
+                </Link>
+                <Link to={tools[7].path} style={{ textDecoration: 'none' }}>
+                  <IconContainer text={tools[7].name} delay={0.75} icon={toolIcons[7]} />
                 </Link>
               </div>
             </div>

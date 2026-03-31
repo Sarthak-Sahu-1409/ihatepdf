@@ -37,7 +37,8 @@
 |---|---|---|
 | 📄 **Merge PDF** | `/merge` | Drag-and-drop to seamlessly combine multiple PDF files into one streamlined document. |
 | ✂️ **Split PDF** | `/split` | Visually isolate and extract specific pages from a PDF to create your new file. |
-| 🗜️ **Compress PDF** | `/compress` | Reduce file sizes out of the box efficiently via background-threaded WASM JPEG encoding presets. |
+| � **Rotate PDF** | `/rotate` | Fix page orientation—rotate individual pages or all at once with visual preview. |
+| �🗜️ **Compress PDF** | `/compress` | Reduce file sizes out of the box efficiently via background-threaded WASM JPEG encoding presets. |
 | 🖼️ **PDF → JPG** | `/pdf-to-jpg` | Instantly rasterize PDF pages into high-quality JPEG images via `OffscreenCanvas`. |
 | 📸 **JPG → PDF** | `/jpg-to-pdf` | Neatly convert your local images (PNG, WebP, JPEG, HEIC) back into a sleek standard PDF. |
 | ✍️ **Sign PDF** | `/sign` | Digitally sign documents securely by drawing, typing, or uploading a signature overlay. |
@@ -110,6 +111,7 @@ pdf-tool/
     │   ├── Landing.jsx         # Homepage — tool carousel, highlights, feature cards
     │   ├── MergePDF.jsx        # Merge multiple PDFs
     │   ├── SplitPDF.jsx        # Split / extract PDF pages
+    │   ├── RotatePDF.jsx       # Fix PDF page orientation
     │   ├── CompressPDF.jsx     # Compress PDF file size
     │   ├── PDFtoJPG.jsx        # Convert PDF pages → JPEG images
     │   ├── JPGtoPDF.jsx        # Convert images → PDF document
