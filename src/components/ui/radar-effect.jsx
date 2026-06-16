@@ -147,11 +147,7 @@ export const IconContainer = ({ icon, text, delay }) => {
           {text || "Web Development"}
         </div>
       </div>
-      <style>{`
-        @media (max-width: 767px) {
-          .radar-label { display: none; }
-        }
-      `}</style>
+
     </motion.div>
   );
 };
